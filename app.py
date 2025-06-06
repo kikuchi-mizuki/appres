@@ -11,7 +11,7 @@ from openai import OpenAI
 import time
 import json
 import traceback
-from streamlit_autorefresh import st_autorefresh
+from streamlit_extras.st_autorefresh import st_autorefresh
 import requests
 
 # 環境変数の読み込み
