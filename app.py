@@ -10,6 +10,7 @@ from streamlit_autorefresh import st_autorefresh
 import requests
 from datetime import datetime, timedelta
 import pytz
+import re
 
 # 環境変数の読み込み
 load_dotenv()
@@ -150,6 +151,21 @@ def check_messages():
                         st.session_state.messages.append(f"Login success! User element2: {user2_text}")
                         st.write(f"Login success! User element2: {user2_text}")
                         print(f"Login success! User element2: {user2_text}")
+                    # <body>以降のHTMLスニペットを出力
+                    body_match = re.search(r'<body.*?>.*', page.content(), re.DOTALL)
+                    if body_match:
+                        body_snippet = body_match.group(0)[:1000]
+                        st.session_state.messages.append(f"Body snippet: {body_snippet}")
+                        st.write("Body snippet (first 1000 chars):")
+                        st.code(body_snippet)
+                        print(f"Body snippet: {body_snippet}")
+                    # さらに多様なエラー要素を探す
+                    error_elem2 = page.query_selector("div:has-text('incorrect'), div:has-text('error'), div:has-text('try again'), div:has-text('Invalid'), span:has-text('error'), span:has-text('invalid')")
+                    if error_elem2:
+                        error2_text = error_elem2.inner_text()
+                        st.session_state.messages.append(f"Login failed (extra check): {error2_text}")
+                        st.write(f"Login failed (extra check): {error2_text}")
+                        print(f"Login failed (extra check): {error2_text}")
                 else:
                     st.session_state.messages.append("Login submit button not found.")
                     st.write("Login submit button not found.")
