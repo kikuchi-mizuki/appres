@@ -384,6 +384,9 @@ def yyc_login_test():
             time.sleep(2)
             display_screenshot(page, "YYCログイン後ページ")
             log_debug(f"ログイン後タイトル: {page.title()}")
+            # ログイン後ページのHTMLスニペットも出力
+            post_html_snippet = page.content()[:1000]
+            log_debug(f"YYCログイン後ページHTMLスニペット: {post_html_snippet}")
         else:
             log_error("ログインフォーム要素が見つかりません")
         context.close()
