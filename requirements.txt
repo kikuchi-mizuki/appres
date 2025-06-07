@@ -1,11 +1,9 @@
 streamlit==1.32.0
-selenium==4.18.1
+playwright==1.42.0
 openai==1.12.0
 python-dotenv==1.0.1
 streamlit-extras==0.3.4
-webdriver-manager==4.0.1
 httpx>=0.24.0
 flask==3.0.0
 requests
-chromedriver-autoinstaller
 streamlit-autorefresh 
