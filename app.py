@@ -59,13 +59,26 @@ def import_yyc_cookies_from_obj(driver, cookies):
 
 def get_screenshot_as_base64(page):
     """ページのスクリーンショットをBase64エンコードして返す"""
-    screenshot = page.screenshot()
-    return base64.b64encode(screenshot).decode()
+    try:
+        # ページの読み込み完了を待つ
+        page.wait_for_load_state("networkidle", timeout=60000)
+        # スクリーンショットを取得
+        screenshot = page.screenshot(timeout=60000)
+        return base64.b64encode(screenshot).decode()
+    except Exception as e:
+        st.error(f"Screenshot error: {str(e)}")
+        return None
 
 def display_screenshot(page, caption):
     """スクリーンショットをStreamlitで表示"""
-    screenshot_base64 = get_screenshot_as_base64(page)
-    st.image(f"data:image/png;base64,{screenshot_base64}", caption=caption)
+    try:
+        screenshot_base64 = get_screenshot_as_base64(page)
+        if screenshot_base64:
+            st.image(f"data:image/png;base64,{screenshot_base64}", caption=caption)
+        else:
+            st.warning(f"Could not capture screenshot for: {caption}")
+    except Exception as e:
+        st.error(f"Display screenshot error: {str(e)}")
 
 def check_messages():
     try:
@@ -93,7 +106,11 @@ def check_messages():
         page = context.new_page()
         st.write("navigating to app.resy.com")
         print("navigating to app.resy.com")
-        page.goto("https://app.resy.com/")
+        
+        # ページ遷移のタイムアウトを延長
+        page.goto("https://app.resy.com/", timeout=60000)
+        page.wait_for_load_state("networkidle", timeout=60000)
+        
         st.write("after goto app.resy.com")
         print("after goto app.resy.com")
         
@@ -108,6 +125,8 @@ def check_messages():
         login_button = page.query_selector("text=Log In")
         if login_button:
             login_button.click()
+            # クリック後の読み込みを待つ
+            page.wait_for_load_state("networkidle", timeout=60000)
             time.sleep(3)
             st.write("navigated to login page")
             print("navigated to login page")
