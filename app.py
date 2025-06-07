@@ -384,9 +384,17 @@ def yyc_login_test():
             time.sleep(2)
             display_screenshot(page, "YYCログイン後ページ")
             log_debug(f"ログイン後タイトル: {page.title()}")
-            # ログイン後ページのHTMLスニペットも出力
-            post_html_snippet = page.content()[:1000]
+            # ログイン後ページのHTMLスニペット（5000文字）
+            post_html_snippet = page.content()[:5000]
             log_debug(f"YYCログイン後ページHTMLスニペット: {post_html_snippet}")
+            # エラー要素の検出
+            error_elem = page.query_selector(".error, .alert, .formError, div[style*='color:red'], span[style*='color:red']")
+            if error_elem:
+                log_debug(f"エラー要素検出: {error_elem.inner_text()}")
+            # CAPTCHA画像の検出
+            captcha_img = page.query_selector("img[src*='captcha'], img[alt*='認証'], img[alt*='captcha']")
+            if captcha_img:
+                log_debug(f"CAPTCHA画像検出: {captcha_img.get_attribute('src')}")
         else:
             log_error("ログインフォーム要素が見つかりません")
         context.close()
