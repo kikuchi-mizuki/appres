@@ -342,6 +342,59 @@ def check_messages():
         except Exception as cleanup_error:
             log_error("Cleanup error", cleanup_error)
 
+def yyc_login_test():
+    """YYCにログインし、トップページのスクリーンショットを表示"""
+    try:
+        log_debug("YYCログインテスト開始")
+        playwright = sync_playwright().start()
+        browser = playwright.chromium.launch(headless=True, args=[
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled'
+        ])
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={'width': 1280, 'height': 800}
+        )
+        page = context.new_page()
+        log_debug("YYCログイントップページへ遷移")
+        page.goto("https://www.yyc.co.jp/login.php", wait_until="domcontentloaded", timeout=60000)
+        time.sleep(2)
+        display_screenshot(page, "YYCログインページ")
+        
+        email_input = page.query_selector("input[name='login_id']")
+        password_input = page.query_selector("input[name='passwd']")
+        login_btn = page.query_selector("button[type='submit'], input[type='submit']")
+        
+        if email_input and password_input and login_btn:
+            email_input.fill(user_email)
+            password_input.fill(user_password)
+            log_debug("ログインフォーム入力完了")
+            display_screenshot(page, "YYCログインフォーム入力後")
+            login_btn.click()
+            page.wait_for_load_state("domcontentloaded", timeout=10000)
+            time.sleep(2)
+            display_screenshot(page, "YYCログイン後ページ")
+            log_debug(f"ログイン後タイトル: {page.title()}")
+        else:
+            log_error("ログインフォーム要素が見つかりません")
+        context.close()
+        browser.close()
+        playwright.stop()
+        log_debug("ブラウザ終了")
+    except Exception as e:
+        log_error("YYCログインテストでエラー", e)
+        try:
+            if 'context' in locals():
+                context.close()
+            if 'browser' in locals():
+                browser.close()
+            if 'playwright' in locals():
+                playwright.stop()
+        except Exception as cleanup_error:
+            log_error("Cleanup error", cleanup_error)
+
 def main():
     st.title("Resy Message Monitor")
     log_debug("Application started")
@@ -357,6 +410,12 @@ def main():
             st.rerun()
         except Exception as e:
             log_error("Refresh error", e)
+
+    # Streamlit UIにテストボタン追加
+    st.write("---")
+    st.write("YYCログインテスト:")
+    if st.button("YYCログインテスト実行"):
+        yyc_login_test()
 
 if __name__ == "__main__":
     main() 
