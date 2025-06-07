@@ -384,9 +384,25 @@ def yyc_login_test():
             time.sleep(2)
             display_screenshot(page, "YYCログイン後ページ")
             log_debug(f"ログイン後タイトル: {page.title()}")
-            # ログイン後ページのHTMLスニペット（5000文字）
-            post_html_snippet = page.content()[:5000]
-            log_debug(f"YYCログイン後ページHTMLスニペット: {post_html_snippet}")
+            # ログイン後ページのbodyタグ内HTML（5000文字）
+            try:
+                body_elem = page.query_selector('body')
+                if body_elem:
+                    body_html = body_elem.inner_html()[:5000]
+                    log_debug(f"YYCログイン後ページBODYスニペット: {body_html}")
+                else:
+                    log_debug("bodyタグが見つかりません")
+            except Exception as e:
+                log_debug(f"bodyタグ抽出エラー: {str(e)}")
+            # フォーム内の全input値を出力
+            try:
+                inputs = page.query_selector_all('form input')
+                for i, inp in enumerate(inputs):
+                    name = inp.get_attribute('name')
+                    value = inp.get_attribute('value')
+                    log_debug(f"input[{i}]: name={name}, value={value}")
+            except Exception as e:
+                log_debug(f"input抽出エラー: {str(e)}")
             # エラー要素の検出
             error_elem = page.query_selector(".error, .alert, .formError, div[style*='color:red'], span[style*='color:red']")
             if error_elem:
