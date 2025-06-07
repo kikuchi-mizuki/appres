@@ -1,66 +1,50 @@
-FROM python:3.12-slim
+FROM python:3.9-slim
 
-# 必要なパッケージをインストール（分割して実行）
-RUN apt-get update && apt-get install -y --no-install-recommends \
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     curl \
-    netcat-openbsd \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
-# X11関連パッケージのインストール
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libdbus-1-3 \
-    libxcb1 \
-    libxkbcommon0 \
-    libx11-6 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libasound2 \
-    xvfb \
+# Install Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
     && rm -rf /var/lib/apt/lists/*
 
-# 作業ディレクトリを設定
-WORKDIR /app
+# Install Chrome WebDriver
+RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1) \
+    && wget -q "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/$CHROME_VERSION.0.6096.0/linux64/chromedriver-linux64.zip" \
+    && unzip chromedriver-linux64.zip \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/ \
+    && rm -rf chromedriver-linux64.zip chromedriver-linux64
 
-# 環境変数を設定
-ENV PYTHONUNBUFFERED=1
-ENV DISPLAY=:99
-ENV PORT=8501
-
-# 依存関係ファイルをコピー
+# Install Python dependencies
 COPY requirements.txt .
-
-# 依存関係をインストール
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Playwrightのブラウザをインストール
-RUN playwright install chromium
-RUN playwright install-deps
-
-# アプリケーションのファイルをコピー
+# Copy application code
 COPY . .
 
-# ポートを公開
-EXPOSE $PORT
-
-# ヘルスチェック用のスクリプトを作成
-RUN echo '#!/bin/bash\n\
-nc -z localhost $PORT && curl -s http://localhost:$PORT/_stcore/health > /dev/null' > /app/healthcheck.sh \
+# Create healthcheck script
+RUN echo '#!/bin/bash\nnc -z localhost $PORT && curl -s http://localhost:$PORT/ > /dev/null' > /app/healthcheck.sh \
     && chmod +x /app/healthcheck.sh
 
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8501
+
+# Expose port
+EXPOSE $PORT
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD /app/healthcheck.sh
+
 # アプリケーションを起動
-CMD ["streamlit", "run", "app.py", "--server.port", "$PORT", "--server.address", "0.0.0.0"] 
+CMD streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 
