@@ -55,9 +55,16 @@ EXPOSE $PORT
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD /app/healthcheck.sh
 
-# Create start script
-RUN echo '#!/bin/bash\nstreamlit run app.py --server.port=$PORT --server.address=0.0.0.0' > /app/start.sh \
+# Create start script with debug output
+RUN echo '#!/bin/bash\n\
+echo "Starting Streamlit with PORT=$PORT"\n\
+if [ -z "$PORT" ]; then\n\
+    echo "PORT is not set, using default 8501"\n\
+    PORT=8501\n\
+fi\n\
+echo "Using PORT=$PORT"\n\
+exec streamlit run app.py --server.port=$PORT --server.address=0.0.0.0' > /app/start.sh \
     && chmod +x /app/start.sh
 
 # Start Streamlit application
-CMD ["/app/start.sh"] 
+CMD ["/bin/bash", "/app/start.sh"] 
