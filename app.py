@@ -53,9 +53,7 @@ def check_messages():
     pass
 
 def main():
-    pass
+    st.title("Resy Message Monitor")
+    st.write("main OK")
 
-def app():
-    pass
-
-st.write("Hello, world! (functions OK)") 
+main() 
