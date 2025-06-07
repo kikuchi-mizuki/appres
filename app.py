@@ -84,12 +84,17 @@ def log_error(message, error=None):
 def get_screenshot_as_base64(page):
     """ページのスクリーンショットをBase64エンコードして返す"""
     try:
-        log_debug("Waiting for page load state: networkidle")
-        page.wait_for_load_state("networkidle", timeout=60000)
-        log_debug("Page load state: networkidle completed")
+        # ページの読み込み状態を確認
+        try:
+            # まずdomcontentloadedを確認
+            page.wait_for_load_state("domcontentloaded", timeout=10000)
+            log_debug("Page is in domcontentloaded state")
+        except Exception as e:
+            log_debug(f"domcontentloaded timeout (non-critical): {str(e)}")
         
+        # スクリーンショットを取得（タイムアウトは短めに）
         log_debug("Taking screenshot")
-        screenshot = page.screenshot(timeout=60000)
+        screenshot = page.screenshot(timeout=10000)
         log_debug("Screenshot taken successfully")
         
         return base64.b64encode(screenshot).decode()
@@ -139,13 +144,6 @@ def check_messages():
             page.goto("https://app.resy.com/", wait_until="domcontentloaded", timeout=60000)
             log_debug("Initial page load completed")
             
-            # その後、必要に応じてnetworkidleを待つ（タイムアウトは短めに）
-            try:
-                page.wait_for_load_state("networkidle", timeout=10000)
-                log_debug("Network idle state reached")
-            except Exception as e:
-                log_debug(f"Network idle timeout (non-critical): {str(e)}")
-            
             # ページが完全に読み込まれるまで少し待機
             time.sleep(5)
             
@@ -163,7 +161,7 @@ def check_messages():
             log_debug("Login button found")
             try:
                 login_button.click()
-                # クリック後の読み込みを待つ（タイムアウトは短めに）
+                # クリック後の読み込みを待つ
                 try:
                     page.wait_for_load_state("domcontentloaded", timeout=10000)
                     log_debug("Post-click page load completed")
@@ -211,7 +209,7 @@ def check_messages():
                         display_screenshot(page, "Before Click")
                         
                         submit_btn.click(force=True)
-                        # クリック後の読み込みを待つ（タイムアウトは短めに）
+                        # クリック後の読み込みを待つ
                         try:
                             page.wait_for_load_state("domcontentloaded", timeout=10000)
                             log_debug("Post-submit page load completed")
