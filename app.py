@@ -271,7 +271,7 @@ def import_yyc_cookies_from_obj(driver, cookies):
         return False
 
 def check_messages():
-    """Check for new messages using Playwright"""
+    print("check_messages() called")
     try:
         if not st.session_state.browser:
             st.session_state.playwright, st.session_state.browser, st.session_state.context = setup_browser()
@@ -305,19 +305,20 @@ def check_messages():
         cleanup_browser()
 
 def main():
+    print("main() started")
     st.title("Resy Message Monitor")
-    
-    # Check for new messages every 5 minutes
-    if (not st.session_state.last_check or 
-        datetime.now(pytz.UTC) - datetime.fromisoformat(st.session_state.last_check) > timedelta(minutes=5)):
-        check_messages()
-    
+    try:
+        # Check for new messages every 5 minutes
+        if (not st.session_state.last_check or 
+            datetime.now(pytz.UTC) - datetime.fromisoformat(st.session_state.last_check) > timedelta(minutes=5)):
+            check_messages()
+    except Exception as e:
+        st.error(f"初期化エラー: {e}")
     # Display messages
     for message in st.session_state.messages:
         st.write(f"Message: {message['text']}")
         st.write(f"Time: {message['timestamp']}")
         st.write("---")
-    
     # Add refresh button
     if st.button("Refresh Messages"):
         check_messages()
