@@ -73,6 +73,17 @@ def check_messages():
         title = page.title()
         st.write(f"page title: {title}")
         print(f"page title: {title}")
+        # ログインフォームの有無を確認
+        email_input = page.query_selector("input[type='email']")
+        password_input = page.query_selector("input[type='password']")
+        if email_input and password_input:
+            st.session_state.messages.append("Login form found!")
+            st.write("Login form found!")
+            print("Login form found!")
+        else:
+            st.session_state.messages.append("Login form not found.")
+            st.write("Login form not found.")
+            print("Login form not found.")
         st.session_state.messages.append(f"Page title: {title}")
         context.close()
         browser.close()
