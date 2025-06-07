@@ -50,7 +50,10 @@ def import_yyc_cookies_from_obj(driver, cookies):
     pass
 
 def check_messages():
-    pass
+    try:
+        st.session_state.messages.append("Checked! (dummy)")
+    except Exception as e:
+        st.error(f"check_messages error: {e}")
 
 def main():
     st.title("Resy Message Monitor")
@@ -60,9 +63,12 @@ def main():
     st.write("Messages:")
     for message in st.session_state.messages:
         st.write(f"- {message}")
-    # リフレッシュボタンでダミーメッセージを追加
+    # リフレッシュボタンでcheck_messagesを呼ぶ
     if st.button("Refresh Messages"):
-        st.session_state.messages.append("Dummy message!")
-        st.experimental_rerun()
+        try:
+            check_messages()
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"Refresh error: {e}")
 
 main() 
