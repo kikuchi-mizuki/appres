@@ -10,6 +10,7 @@ from streamlit_autorefresh import st_autorefresh
 import requests
 from datetime import datetime, timedelta
 import pytz
+from flask import Flask, request
 
 # 環境変数の読み込み
 load_dotenv()
@@ -323,6 +324,13 @@ def main():
     if st.button("Refresh Messages"):
         check_messages()
         st.experimental_rerun()
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/webhook', methods=['POST'])
+def webhook():
+    print("LINE Webhook受信:", request.json)
+    return "OK", 200
 
 if __name__ == "__main__":
     st.markdown('''
