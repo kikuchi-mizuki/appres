@@ -57,4 +57,4 @@ EXPOSE $PORT
 #     CMD /app/healthcheck.sh
 
 # Start Streamlit application
-CMD ["sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
+CMD sh -c "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0" 
