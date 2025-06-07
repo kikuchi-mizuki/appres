@@ -1,6 +1,39 @@
-# YYCメッセージ返信アシスタント（Railwayデプロイ用）
+# YYC Auto Reply Assistant
 
-YYCのメッセージを自動で取得し、ChatGPTを使用して返信を生成する半自動返信アシスタントです。
+This is a Streamlit application that automates message replies using Selenium and OpenAI.
+
+## Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/kikuchi-mizuki/appres.git
+   cd appres
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Create a `.env` file in the root directory and add your OpenAI API key:
+   ```
+   OPENAI_API_KEY=your_api_key_here
+   ```
+
+4. Run the application:
+   ```bash
+   streamlit run app.py
+   ```
+
+## Usage
+
+- Upload your cookie file to start the automated reply process.
+- The application will automatically check for new messages and generate replies using OpenAI.
+- Use the sidebar to configure settings like model selection and notification preferences.
+
+## Deployment
+
+This application is configured for deployment on Railway. Follow the deployment instructions provided by Railway to deploy the application.
 
 ## 機能
 
@@ -8,32 +41,6 @@ YYCのメッセージを自動で取得し、ChatGPTを使用して返信を生�
 - ChatGPTを使用した自然な返信の生成
 - カスタマイズ可能なペルソナ設定
 - コピー＆ペースト可能な返信文
-
-## セットアップ
-
-1. 必要なパッケージのインストール:
-```bash
-pip install -r requirements.txt
-```
-
-2. 環境変数の設定:
-`.env`ファイルを作成し、以下の内容を追加:
-```
-OPENAI_API_KEY=your_api_key_here
-```
-
-## 使用方法
-
-1. アプリケーションの起動:
-```bash
-streamlit run app.py
-```
-
-2. ブラウザで表示されるインターフェースで:
-   - サイドバーでペルソナを設定
-   - YYCのメッセージページのURLを入力
-   - 「メッセージを取得」ボタンをクリック
-   - 生成された返信を確認し、必要に応じてコピー
 
 ## 注意事項
 
