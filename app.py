@@ -60,8 +60,9 @@ def main():
     st.write("Messages:")
     for message in st.session_state.messages:
         st.write(f"- {message}")
-    # リフレッシュボタン（まだ処理は追加しない）
+    # リフレッシュボタンでダミーメッセージを追加
     if st.button("Refresh Messages"):
-        st.write("Refresh button pressed (no action yet)")
+        st.session_state.messages.append("Dummy message!")
+        st.experimental_rerun()
 
 main() 
