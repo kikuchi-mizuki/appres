@@ -154,9 +154,9 @@ def check_messages():
                     # <body>以降のHTMLスニペットを出力
                     body_match = re.search(r'<body.*?>.*', page.content(), re.DOTALL)
                     if body_match:
-                        body_snippet = body_match.group(0)[:1000]
+                        body_snippet = body_match.group(0)[:2000]
                         st.session_state.messages.append(f"Body snippet: {body_snippet}")
-                        st.write("Body snippet (first 1000 chars):")
+                        st.write("Body snippet (first 2000 chars):")
                         st.code(body_snippet)
                         print(f"Body snippet: {body_snippet}")
                     # さらに多様なエラー要素を探す
