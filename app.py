@@ -51,7 +51,13 @@ def import_yyc_cookies_from_obj(driver, cookies):
 
 def check_messages():
     try:
-        st.session_state.messages.append("Checked! (dummy)")
+        playwright = sync_playwright().start()
+        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+        context = browser.new_context()
+        st.session_state.messages.append("Playwright browser started!")
+        context.close()
+        browser.close()
+        playwright.stop()
     except Exception as e:
         st.error(f"check_messages error: {e}")
 
