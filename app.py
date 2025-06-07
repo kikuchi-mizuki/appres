@@ -55,5 +55,13 @@ def check_messages():
 def main():
     st.title("Resy Message Monitor")
     st.write("main OK")
+    # メッセージリストの表示
+    st.write("---")
+    st.write("Messages:")
+    for message in st.session_state.messages:
+        st.write(f"- {message}")
+    # リフレッシュボタン（まだ処理は追加しない）
+    if st.button("Refresh Messages"):
+        st.write("Refresh button pressed (no action yet)")
 
 main() 
