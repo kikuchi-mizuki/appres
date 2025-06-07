@@ -82,7 +82,8 @@ def check_messages():
         login_button = page.query_selector("text=Log In")
         if login_button:
             login_button.click()
-            page.wait_for_load_state('networkidle')
+            import time
+            time.sleep(3)
             st.write("navigated to login page")
             print("navigated to login page")
         else:
