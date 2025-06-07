@@ -73,7 +73,7 @@ def main():
     if st.button("Refresh Messages"):
         try:
             check_messages()
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"Refresh error: {e}")
 
