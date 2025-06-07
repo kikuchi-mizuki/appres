@@ -5,10 +5,30 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     wget \
-    gnupg \
     curl \
-    netcat-traditional \
+    gnupg \
     unzip \
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxcb1 \
+    libxkbcommon0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Chrome
@@ -24,6 +44,9 @@ RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1)
     && unzip chromedriver-linux64.zip \
     && mv chromedriver-linux64/chromedriver /usr/local/bin/ \
     && rm -rf chromedriver-linux64.zip chromedriver-linux64
+
+# Install Playwright
+RUN pip install --no-cache-dir playwright && playwright install chromium
 
 # Install Python dependencies
 COPY requirements.txt .
