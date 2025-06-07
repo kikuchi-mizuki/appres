@@ -72,6 +72,7 @@ for i in {1..30}; do\n\
     echo "Port $PORT is open"\n\
     if curl -s http://localhost:$PORT/_stcore/health > /dev/null; then\n\
       echo "Streamlit is ready!"\n\
+      tail -f /dev/null\n\
       exit 0\n\
     fi\n\
   fi\n\
