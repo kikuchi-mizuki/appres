@@ -13,6 +13,14 @@ import pytz
 import re
 import base64
 from io import BytesIO
+import logging
+
+# ロギングの設定
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # 環境変数の読み込み
 load_dotenv()
@@ -57,221 +65,180 @@ def generate_reply(message, persona, partner_name, model_choice):
 def import_yyc_cookies_from_obj(driver, cookies):
     pass
 
+def log_debug(message):
+    """デバッグメッセージをログとStreamlitに出力"""
+    logger.debug(message)
+    st.write(f"DEBUG: {message}")
+    print(f"DEBUG: {message}")
+
+def log_error(message, error=None):
+    """エラーメッセージをログとStreamlitに出力"""
+    logger.error(message)
+    st.error(f"ERROR: {message}")
+    print(f"ERROR: {message}")
+    if error:
+        logger.error(traceback.format_exc())
+        st.error(f"Error details:\n{traceback.format_exc()}")
+        print(f"Error details:\n{traceback.format_exc()}")
+
 def get_screenshot_as_base64(page):
     """ページのスクリーンショットをBase64エンコードして返す"""
     try:
-        # ページの読み込み完了を待つ
+        log_debug("Waiting for page load state: networkidle")
         page.wait_for_load_state("networkidle", timeout=60000)
-        # スクリーンショットを取得
+        log_debug("Page load state: networkidle completed")
+        
+        log_debug("Taking screenshot")
         screenshot = page.screenshot(timeout=60000)
+        log_debug("Screenshot taken successfully")
+        
         return base64.b64encode(screenshot).decode()
     except Exception as e:
-        st.error(f"Screenshot error: {str(e)}")
+        log_error("Screenshot error", e)
         return None
 
 def display_screenshot(page, caption):
     """スクリーンショットをStreamlitで表示"""
     try:
+        log_debug(f"Attempting to display screenshot: {caption}")
         screenshot_base64 = get_screenshot_as_base64(page)
         if screenshot_base64:
             st.image(f"data:image/png;base64,{screenshot_base64}", caption=caption)
+            log_debug(f"Screenshot displayed successfully: {caption}")
         else:
-            st.warning(f"Could not capture screenshot for: {caption}")
+            log_error(f"Could not capture screenshot for: {caption}")
     except Exception as e:
-        st.error(f"Display screenshot error: {str(e)}")
+        log_error(f"Display screenshot error: {caption}", e)
 
 def check_messages():
     try:
-        st.write("check_messages called")
-        print("check_messages called")
-        st.write("before playwright start")
-        print("before playwright start")
+        log_debug("Starting check_messages")
         playwright = sync_playwright().start()
-        st.write("after playwright start")
-        print("after playwright start")
+        log_debug("Playwright started")
+        
         browser = playwright.chromium.launch(headless=True, args=[
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-blink-features=AutomationControlled'
         ])
-        st.write("after browser launch")
-        print("after browser launch")
+        log_debug("Browser launched")
+        
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             viewport={'width': 1920, 'height': 1080}
         )
-        st.write("after context creation")
-        print("after context creation")
-        page = context.new_page()
-        st.write("navigating to app.resy.com")
-        print("navigating to app.resy.com")
+        log_debug("Browser context created")
         
-        # ページ遷移のタイムアウトを延長
+        page = context.new_page()
+        log_debug("New page created")
+        
+        log_debug("Navigating to app.resy.com")
         page.goto("https://app.resy.com/", timeout=60000)
         page.wait_for_load_state("networkidle", timeout=60000)
+        log_debug("Navigation completed")
         
-        st.write("after goto app.resy.com")
-        print("after goto app.resy.com")
-        
-        # 初期ページのスクリーンショット
         display_screenshot(page, "Initial Page")
         
         title = page.title()
-        st.write(f"page title: {title}")
-        print(f"page title: {title}")
+        log_debug(f"Page title: {title}")
         
-        # ログインページに遷移
         login_button = page.query_selector("text=Log In")
         if login_button:
+            log_debug("Login button found")
             login_button.click()
-            # クリック後の読み込みを待つ
             page.wait_for_load_state("networkidle", timeout=60000)
             time.sleep(3)
-            st.write("navigated to login page")
-            print("navigated to login page")
+            log_debug("Clicked login button and waited for navigation")
             
-            # ログインページのスクリーンショット
             display_screenshot(page, "Login Page")
         else:
-            st.write("Log In button not found.")
-            print("Log In button not found.")
+            log_error("Login button not found")
         
-        # ログインフォームの有無を確認
         email_input = page.query_selector("input[type='email']")
         password_input = page.query_selector("input[type='password']")
+        
         if email_input and password_input:
-            st.session_state.messages.append("Login form found!")
-            st.write("Login form found!")
-            print("Login form found!")
-            
-            # 入力値があれば自動入力してログイン
+            log_debug("Login form found")
             if user_email and user_password:
-                # 入力前のスクリーンショット
+                log_debug("Attempting to fill login form")
                 display_screenshot(page, "Before Input")
                 
                 email_input.fill(user_email)
                 password_input.fill(user_password)
+                log_debug("Login form filled")
                 
-                # 入力後のスクリーンショット
                 display_screenshot(page, "After Input")
                 
                 submit_btn = page.query_selector("button[type='submit'], button:has-text('Log In')")
                 if submit_btn:
+                    log_debug("Submit button found")
                     submit_btn.wait_for_element_state("visible")
                     submit_btn.wait_for_element_state("enabled")
+                    log_debug("Submit button is visible and enabled")
                     
-                    # クリック前のスクリーンショット
                     display_screenshot(page, "Before Click")
                     
-                    # クリックを試みる
                     submit_btn.click(force=True)
+                    page.wait_for_load_state("networkidle", timeout=60000)
                     time.sleep(3)
+                    log_debug("Submit button clicked")
                     
-                    # クリック後のスクリーンショット
                     display_screenshot(page, "After Click")
                     
-                    st.session_state.messages.append("Login attempted!")
-                    st.write("Login attempted!")
-                    print("Login attempted!")
-                    
-                    # ログイン後のページタイトルを取得
                     post_login_title = page.title()
-                    st.session_state.messages.append(f"Post-login page title: {post_login_title}")
-                    st.write(f"Post-login page title: {post_login_title}")
-                    print(f"Post-login page title: {post_login_title}")
+                    log_debug(f"Post-login page title: {post_login_title}")
                     
-                    # ログイン後のエラーやユーザー名要素をチェック
+                    # ログイン後の状態チェック
                     error_elem = page.query_selector(".error, .alert, div:has-text('Invalid'), div:has-text('incorrect'), div:has-text('failed')")
                     user_elem = page.query_selector("div:has-text('Welcome'), div:has-text('My Reservations'), .user, .profile")
                     login_form_still = page.query_selector("input[type='email']")
                     
                     if error_elem:
                         error_text = error_elem.inner_text()
-                        st.session_state.messages.append(f"Login failed: {error_text}")
-                        st.write(f"Login failed: {error_text}")
-                        print(f"Login failed: {error_text}")
+                        log_error(f"Login failed: {error_text}")
                     elif login_form_still:
-                        st.session_state.messages.append("Login failed: login form still present.")
-                        st.write("Login failed: login form still present.")
-                        print("Login failed: login form still present.")
+                        log_error("Login failed: login form still present")
                     elif user_elem:
                         user_text = user_elem.inner_text()
-                        st.session_state.messages.append(f"Login success! User element: {user_text}")
-                        st.write(f"Login success! User element: {user_text}")
-                        print(f"Login success! User element: {user_text}")
+                        log_debug(f"Login success! User element: {user_text}")
                     else:
-                        st.session_state.messages.append("Login result unclear: no error or user element found.")
-                        st.write("Login result unclear: no error or user element found.")
-                        print("Login result unclear: no error or user element found.")
+                        log_error("Login result unclear: no error or user element found")
                     
-                    # デバッグ用: HTMLスニペットをmessagesに表示
+                    # HTMLスニペットの出力
                     html_snippet = page.content()[:1000]
-                    st.session_state.messages.append(f"HTML snippet: {html_snippet}")
-                    st.write("HTML snippet (first 1000 chars):")
-                    st.code(html_snippet)
-                    print(f"HTML snippet: {html_snippet}")
+                    log_debug(f"HTML snippet: {html_snippet}")
                     
-                    # 追加のユーザー要素検出
-                    user_elem2 = page.query_selector("a:has-text('Sign Out'), a:has-text('My Reservations'), a:has-text('Profile'), button:has-text('Sign Out')")
-                    if user_elem2:
-                        user2_text = user_elem2.inner_text()
-                        st.session_state.messages.append(f"Login success! User element2: {user2_text}")
-                        st.write(f"Login success! User element2: {user2_text}")
-                        print(f"Login success! User element2: {user2_text}")
-                    
-                    # <body>以降のHTMLスニペットを出力
-                    body_match = re.search(r'<body.*?>.*', page.content(), re.DOTALL)
-                    if body_match:
-                        body_snippet = body_match.group(0)[:2000]
-                        st.session_state.messages.append(f"Body snippet: {body_snippet}")
-                        st.write("Body snippet (first 2000 chars):")
-                        st.code(body_snippet)
-                        print(f"Body snippet: {body_snippet}")
-                    
-                    # さらに多様なエラー要素を探す
-                    error_elem2 = page.query_selector("div:has-text('incorrect'), div:has-text('error'), div:has-text('try again'), div:has-text('Invalid'), span:has-text('error'), span:has-text('invalid')")
-                    if error_elem2:
-                        error2_text = error_elem2.inner_text()
-                        st.session_state.messages.append(f"Login failed (extra check): {error2_text}")
-                        st.write(f"Login failed (extra check): {error2_text}")
-                        print(f"Login failed (extra check): {error2_text}")
                 else:
-                    st.session_state.messages.append("Login submit button not found.")
-                    st.write("Login submit button not found.")
-                    print("Login submit button not found.")
+                    log_error("Submit button not found")
             else:
-                st.session_state.messages.append("No email/password provided.")
-                st.write("No email/password provided.")
-                print("No email/password provided.")
+                log_error("No email/password provided")
         else:
-            st.session_state.messages.append("Login form not found.")
-            st.write("Login form not found.")
-            print("Login form not found.")
+            log_error("Login form not found")
         
-        st.session_state.messages.append(f"Page title: {title}")
         context.close()
         browser.close()
         playwright.stop()
+        log_debug("Browser and Playwright closed")
+        
     except Exception as e:
-        import traceback
-        st.error(f"check_messages error: {e}\n{traceback.format_exc()}")
-        print(f"check_messages error: {e}\n{traceback.format_exc()}")
+        log_error("check_messages error", e)
 
 def main():
     st.title("Resy Message Monitor")
-    st.write("main OK")
-    # メッセージリストの表示
+    log_debug("Application started")
+    
     st.write("---")
     st.write("Messages:")
     for message in st.session_state.messages:
         st.write(f"- {message}")
-    # リフレッシュボタンでcheck_messagesを呼ぶ
+    
     if st.button("Refresh Messages"):
         try:
             check_messages()
             st.rerun()
         except Exception as e:
-            st.error(f"Refresh error: {e}")
+            log_error("Refresh error", e)
 
-main() 
+if __name__ == "__main__":
+    main() 
