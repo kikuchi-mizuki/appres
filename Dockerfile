@@ -33,7 +33,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Playwright
-RUN pip install --no-cache-dir playwright && playwright install chromium
+RUN pip install --no-cache-dir playwright
 
 # Install Python dependencies
 COPY requirements.txt .
@@ -41,6 +41,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Playwrightのブラウザを必ずインストール
+RUN playwright install chromium
 
 # Create healthcheck script
 RUN echo '#!/bin/bash\nnc -z localhost $PORT && curl -s http://localhost:$PORT/ > /dev/null' > /app/healthcheck.sh \
