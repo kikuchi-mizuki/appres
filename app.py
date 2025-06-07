@@ -102,8 +102,11 @@ def check_messages():
                 password_input.fill(user_password)
                 submit_btn = page.query_selector("button[type='submit'], button:has-text('Log In')")
                 if submit_btn:
+                    submit_btn.wait_for_element_state("visible")
+                    submit_btn.wait_for_element_state("enabled")
                     submit_btn.click()
-                    page.wait_for_load_state('networkidle')
+                    import time
+                    time.sleep(3)
                     st.session_state.messages.append("Login attempted!")
                     st.write("Login attempted!")
                     print("Login attempted!")
