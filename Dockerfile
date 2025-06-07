@@ -47,14 +47,13 @@ RUN echo '#!/bin/bash\nnc -z localhost $PORT && curl -s http://localhost:$PORT/ 
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8501
 
 # Expose port
 EXPOSE $PORT
 
 # Health check
-# HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-#     CMD /app/healthcheck.sh
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD /app/healthcheck.sh
 
 # Start Streamlit application
-CMD sh -c "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0" 
+CMD ["/bin/sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
