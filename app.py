@@ -64,10 +64,15 @@ def check_messages():
         playwright = sync_playwright().start()
         st.write("after playwright start")
         print("after playwright start")
-        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'])
+        browser = playwright.chromium.launch(headless=True, args=[
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-blink-features=AutomationControlled'
+        ])
         st.write("after browser launch")
         print("after browser launch")
-        context = browser.new_context()
+        context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
         st.write("after context creation")
         print("after context creation")
         page = context.new_page()
