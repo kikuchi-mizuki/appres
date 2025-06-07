@@ -46,7 +46,7 @@ This application is configured for deployment on Railway. Follow the deployment 
 
 - このアプリケーションは自動ログインや自動送信を行いません
 - 生成された返信は必ず確認してから使用してください
-- YYCの利用規約に従って使用してください
+- YYCの利用規約に従って使用してください 
 
 ## デプロイ手順
 
