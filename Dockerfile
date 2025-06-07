@@ -24,10 +24,15 @@ RUN apt-get update && apt-get install -y \
     libpango-1.0-0 \
     libcairo2 \
     libasound2 \
+    xvfb \
     && rm -rf /var/lib/apt/lists/*
 
 # 作業ディレクトリを設定
 WORKDIR /app
+
+# 環境変数を設定
+ENV PYTHONUNBUFFERED=1
+ENV DISPLAY=:99
 
 # 依存関係ファイルをコピー
 COPY requirements.txt .
@@ -43,7 +48,12 @@ RUN playwright install-deps
 COPY . .
 
 # ポートを公開
-EXPOSE 8501
+ENV PORT=8501
+EXPOSE $PORT
+
+# ヘルスチェック用のスクリプトを作成
+RUN echo '#!/bin/bash\ncurl -f http://localhost:$PORT/_stcore/health || exit 1' > /app/healthcheck.sh \
+    && chmod +x /app/healthcheck.sh
 
 # アプリケーションを起動
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"] 
+CMD Xvfb :99 -screen 0 1024x768x16 & streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 
