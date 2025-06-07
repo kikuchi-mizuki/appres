@@ -11,6 +11,8 @@ import requests
 from datetime import datetime, timedelta
 import pytz
 import re
+import base64
+from io import BytesIO
 
 # 環境変数の読み込み
 load_dotenv()
@@ -55,6 +57,16 @@ def generate_reply(message, persona, partner_name, model_choice):
 def import_yyc_cookies_from_obj(driver, cookies):
     pass
 
+def get_screenshot_as_base64(page):
+    """ページのスクリーンショットをBase64エンコードして返す"""
+    screenshot = page.screenshot()
+    return base64.b64encode(screenshot).decode()
+
+def display_screenshot(page, caption):
+    """スクリーンショットをStreamlitで表示"""
+    screenshot_base64 = get_screenshot_as_base64(page)
+    st.image(f"data:image/png;base64,{screenshot_base64}", caption=caption)
+
 def check_messages():
     try:
         st.write("check_messages called")
@@ -72,7 +84,10 @@ def check_messages():
         ])
         st.write("after browser launch")
         print("after browser launch")
-        context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={'width': 1920, 'height': 1080}
+        )
         st.write("after context creation")
         print("after context creation")
         page = context.new_page()
@@ -81,20 +96,28 @@ def check_messages():
         page.goto("https://app.resy.com/")
         st.write("after goto app.resy.com")
         print("after goto app.resy.com")
+        
+        # 初期ページのスクリーンショット
+        display_screenshot(page, "Initial Page")
+        
         title = page.title()
         st.write(f"page title: {title}")
         print(f"page title: {title}")
+        
         # ログインページに遷移
         login_button = page.query_selector("text=Log In")
         if login_button:
             login_button.click()
-            import time
             time.sleep(3)
             st.write("navigated to login page")
             print("navigated to login page")
+            
+            # ログインページのスクリーンショット
+            display_screenshot(page, "Login Page")
         else:
             st.write("Log In button not found.")
             print("Log In button not found.")
+        
         # ログインフォームの有無を確認
         email_input = page.query_selector("input[type='email']")
         password_input = page.query_selector("input[type='password']")
@@ -102,29 +125,48 @@ def check_messages():
             st.session_state.messages.append("Login form found!")
             st.write("Login form found!")
             print("Login form found!")
+            
             # 入力値があれば自動入力してログイン
             if user_email and user_password:
+                # 入力前のスクリーンショット
+                display_screenshot(page, "Before Input")
+                
                 email_input.fill(user_email)
                 password_input.fill(user_password)
+                
+                # 入力後のスクリーンショット
+                display_screenshot(page, "After Input")
+                
                 submit_btn = page.query_selector("button[type='submit'], button:has-text('Log In')")
                 if submit_btn:
                     submit_btn.wait_for_element_state("visible")
                     submit_btn.wait_for_element_state("enabled")
+                    
+                    # クリック前のスクリーンショット
+                    display_screenshot(page, "Before Click")
+                    
+                    # クリックを試みる
                     submit_btn.click(force=True)
-                    import time
                     time.sleep(3)
+                    
+                    # クリック後のスクリーンショット
+                    display_screenshot(page, "After Click")
+                    
                     st.session_state.messages.append("Login attempted!")
                     st.write("Login attempted!")
                     print("Login attempted!")
+                    
                     # ログイン後のページタイトルを取得
                     post_login_title = page.title()
                     st.session_state.messages.append(f"Post-login page title: {post_login_title}")
                     st.write(f"Post-login page title: {post_login_title}")
                     print(f"Post-login page title: {post_login_title}")
+                    
                     # ログイン後のエラーやユーザー名要素をチェック
                     error_elem = page.query_selector(".error, .alert, div:has-text('Invalid'), div:has-text('incorrect'), div:has-text('failed')")
                     user_elem = page.query_selector("div:has-text('Welcome'), div:has-text('My Reservations'), .user, .profile")
                     login_form_still = page.query_selector("input[type='email']")
+                    
                     if error_elem:
                         error_text = error_elem.inner_text()
                         st.session_state.messages.append(f"Login failed: {error_text}")
@@ -143,12 +185,14 @@ def check_messages():
                         st.session_state.messages.append("Login result unclear: no error or user element found.")
                         st.write("Login result unclear: no error or user element found.")
                         print("Login result unclear: no error or user element found.")
+                    
                     # デバッグ用: HTMLスニペットをmessagesに表示
                     html_snippet = page.content()[:1000]
                     st.session_state.messages.append(f"HTML snippet: {html_snippet}")
                     st.write("HTML snippet (first 1000 chars):")
                     st.code(html_snippet)
                     print(f"HTML snippet: {html_snippet}")
+                    
                     # 追加のユーザー要素検出
                     user_elem2 = page.query_selector("a:has-text('Sign Out'), a:has-text('My Reservations'), a:has-text('Profile'), button:has-text('Sign Out')")
                     if user_elem2:
@@ -156,6 +200,7 @@ def check_messages():
                         st.session_state.messages.append(f"Login success! User element2: {user2_text}")
                         st.write(f"Login success! User element2: {user2_text}")
                         print(f"Login success! User element2: {user2_text}")
+                    
                     # <body>以降のHTMLスニペットを出力
                     body_match = re.search(r'<body.*?>.*', page.content(), re.DOTALL)
                     if body_match:
@@ -164,6 +209,7 @@ def check_messages():
                         st.write("Body snippet (first 2000 chars):")
                         st.code(body_snippet)
                         print(f"Body snippet: {body_snippet}")
+                    
                     # さらに多様なエラー要素を探す
                     error_elem2 = page.query_selector("div:has-text('incorrect'), div:has-text('error'), div:has-text('try again'), div:has-text('Invalid'), span:has-text('error'), span:has-text('invalid')")
                     if error_elem2:
@@ -183,6 +229,7 @@ def check_messages():
             st.session_state.messages.append("Login form not found.")
             st.write("Login form not found.")
             print("Login form not found.")
+        
         st.session_state.messages.append(f"Page title: {title}")
         context.close()
         browser.close()
