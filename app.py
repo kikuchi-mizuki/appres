@@ -134,9 +134,24 @@ def check_messages():
         log_debug("New page created")
         
         log_debug("Navigating to app.resy.com")
-        page.goto("https://app.resy.com/", timeout=60000)
-        page.wait_for_load_state("networkidle", timeout=60000)
-        log_debug("Navigation completed")
+        try:
+            # まずdomcontentloadedを待つ
+            page.goto("https://app.resy.com/", wait_until="domcontentloaded", timeout=60000)
+            log_debug("Initial page load completed")
+            
+            # その後、必要に応じてnetworkidleを待つ（タイムアウトは短めに）
+            try:
+                page.wait_for_load_state("networkidle", timeout=10000)
+                log_debug("Network idle state reached")
+            except Exception as e:
+                log_debug(f"Network idle timeout (non-critical): {str(e)}")
+            
+            # ページが完全に読み込まれるまで少し待機
+            time.sleep(5)
+            
+        except Exception as e:
+            log_error("Page navigation failed", e)
+            raise
         
         display_screenshot(page, "Initial Page")
         
@@ -146,10 +161,21 @@ def check_messages():
         login_button = page.query_selector("text=Log In")
         if login_button:
             log_debug("Login button found")
-            login_button.click()
-            page.wait_for_load_state("networkidle", timeout=60000)
-            time.sleep(3)
-            log_debug("Clicked login button and waited for navigation")
+            try:
+                login_button.click()
+                # クリック後の読み込みを待つ（タイムアウトは短めに）
+                try:
+                    page.wait_for_load_state("domcontentloaded", timeout=10000)
+                    log_debug("Post-click page load completed")
+                except Exception as e:
+                    log_debug(f"Post-click load timeout (non-critical): {str(e)}")
+                
+                time.sleep(3)
+                log_debug("Clicked login button and waited for navigation")
+                
+            except Exception as e:
+                log_error("Login button click failed", e)
+                raise
             
             display_screenshot(page, "Login Page")
         else:
@@ -164,25 +190,40 @@ def check_messages():
                 log_debug("Attempting to fill login form")
                 display_screenshot(page, "Before Input")
                 
-                email_input.fill(user_email)
-                password_input.fill(user_password)
-                log_debug("Login form filled")
+                try:
+                    email_input.fill(user_email)
+                    password_input.fill(user_password)
+                    log_debug("Login form filled")
+                except Exception as e:
+                    log_error("Failed to fill login form", e)
+                    raise
                 
                 display_screenshot(page, "After Input")
                 
                 submit_btn = page.query_selector("button[type='submit'], button:has-text('Log In')")
                 if submit_btn:
                     log_debug("Submit button found")
-                    submit_btn.wait_for_element_state("visible")
-                    submit_btn.wait_for_element_state("enabled")
-                    log_debug("Submit button is visible and enabled")
-                    
-                    display_screenshot(page, "Before Click")
-                    
-                    submit_btn.click(force=True)
-                    page.wait_for_load_state("networkidle", timeout=60000)
-                    time.sleep(3)
-                    log_debug("Submit button clicked")
+                    try:
+                        submit_btn.wait_for_element_state("visible")
+                        submit_btn.wait_for_element_state("enabled")
+                        log_debug("Submit button is visible and enabled")
+                        
+                        display_screenshot(page, "Before Click")
+                        
+                        submit_btn.click(force=True)
+                        # クリック後の読み込みを待つ（タイムアウトは短めに）
+                        try:
+                            page.wait_for_load_state("domcontentloaded", timeout=10000)
+                            log_debug("Post-submit page load completed")
+                        except Exception as e:
+                            log_debug(f"Post-submit load timeout (non-critical): {str(e)}")
+                        
+                        time.sleep(3)
+                        log_debug("Submit button clicked")
+                        
+                    except Exception as e:
+                        log_error("Submit button click failed", e)
+                        raise
                     
                     display_screenshot(page, "After Click")
                     
@@ -223,6 +264,16 @@ def check_messages():
         
     except Exception as e:
         log_error("check_messages error", e)
+        # エラー時もリソースを確実に解放
+        try:
+            if 'context' in locals():
+                context.close()
+            if 'browser' in locals():
+                browser.close()
+            if 'playwright' in locals():
+                playwright.stop()
+        except Exception as cleanup_error:
+            log_error("Cleanup error", cleanup_error)
 
 def main():
     st.title("Resy Message Monitor")
