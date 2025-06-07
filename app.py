@@ -358,14 +358,21 @@ def yyc_login_test():
             viewport={'width': 1280, 'height': 800}
         )
         page = context.new_page()
-        log_debug("YYCログイントップページへ遷移")
-        page.goto("https://www.yyc.co.jp/login.php", wait_until="domcontentloaded", timeout=60000)
+        log_debug("YYCログインページへ遷移")
+        page.goto("https://www.yyc.co.jp/login/", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
         display_screenshot(page, "YYCログインページ")
         
-        email_input = page.query_selector("input[name='login_id']")
-        password_input = page.query_selector("input[name='passwd']")
-        login_btn = page.query_selector("button[type='submit'], input[type='submit']")
+        # HTMLスニペットを出力
+        html_snippet = page.content()[:1000]
+        log_debug(f"YYCログインページHTMLスニペット: {html_snippet}")
+        
+        # メールアドレス欄
+        email_input = page.query_selector("input[type='text'], input[type='email']")
+        # パスワード欄
+        password_input = page.query_selector("input[type='password']")
+        # ログインボタン
+        login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
         
         if email_input and password_input and login_btn:
             email_input.fill(user_email)
