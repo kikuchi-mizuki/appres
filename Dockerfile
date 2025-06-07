@@ -57,10 +57,10 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 
 # Create start script
 RUN echo '#!/bin/bash\n\
-PORT=${PORT:-8501}\n\
+export PORT=${PORT:-8501}\n\
 echo "Starting Streamlit on port $PORT"\n\
-exec streamlit run app.py --server.port=$PORT --server.address=0.0.0.0' > /app/start.sh \
+exec streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0' > /app/start.sh \
     && chmod +x /app/start.sh
 
 # Start Streamlit application
-CMD ["/bin/bash", "/app/start.sh"] 
+CMD ["/bin/bash", "-c", "/app/start.sh"] 
