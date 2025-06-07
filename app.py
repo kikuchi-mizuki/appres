@@ -73,6 +73,16 @@ def check_messages():
         title = page.title()
         st.write(f"page title: {title}")
         print(f"page title: {title}")
+        # ログインページに遷移
+        login_button = page.query_selector("text=Log In")
+        if login_button:
+            login_button.click()
+            page.wait_for_load_state('networkidle')
+            st.write("navigated to login page")
+            print("navigated to login page")
+        else:
+            st.write("Log In button not found.")
+            print("Log In button not found.")
         # ログインフォームの有無を確認
         email_input = page.query_selector("input[type='email']")
         password_input = page.query_selector("input[type='password']")
