@@ -332,7 +332,7 @@ def webhook():
     print("LINE Webhook受信:", request.json)
     return "OK", 200
 
-if __name__ == "__main__":
+def app():
     st.markdown('''
         <style>
         .stApp {
@@ -451,4 +451,9 @@ if __name__ == "__main__":
         }
         </style>
     ''', unsafe_allow_html=True)
-    main() 
+    main()
+
+if __name__ == "__main__":
+    import sys
+    if 'streamlit' in sys.argv[0]:
+        app() 
