@@ -51,9 +51,14 @@ def import_yyc_cookies_from_obj(driver, cookies):
 
 def check_messages():
     try:
+        st.write("check_messages called")
+        st.write("before playwright start")
         playwright = sync_playwright().start()
+        st.write("after playwright start")
         browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+        st.write("after browser launch")
         context = browser.new_context()
+        st.write("after context creation")
         st.session_state.messages.append("Playwright browser started!")
         context.close()
         browser.close()
