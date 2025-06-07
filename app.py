@@ -14,6 +14,11 @@ import pytz
 # 環境変数の読み込み
 load_dotenv()
 
+# サイドバーでログイン情報を入力
+st.sidebar.header("Login Info")
+user_email = st.sidebar.text_input("Email", key="email")
+user_password = st.sidebar.text_input("Password", type="password", key="password")
+
 # セッションステートの初期化
 if 'messages' not in st.session_state:
     st.session_state.messages = []
@@ -90,6 +95,25 @@ def check_messages():
             st.session_state.messages.append("Login form found!")
             st.write("Login form found!")
             print("Login form found!")
+            # 入力値があれば自動入力してログイン
+            if user_email and user_password:
+                email_input.fill(user_email)
+                password_input.fill(user_password)
+                submit_btn = page.query_selector("button[type='submit'], button:has-text('Log In')")
+                if submit_btn:
+                    submit_btn.click()
+                    page.wait_for_load_state('networkidle')
+                    st.session_state.messages.append("Login attempted!")
+                    st.write("Login attempted!")
+                    print("Login attempted!")
+                else:
+                    st.session_state.messages.append("Login submit button not found.")
+                    st.write("Login submit button not found.")
+                    print("Login submit button not found.")
+            else:
+                st.session_state.messages.append("No email/password provided.")
+                st.write("No email/password provided.")
+                print("No email/password provided.")
         else:
             st.session_state.messages.append("Login form not found.")
             st.write("Login form not found.")
