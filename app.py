@@ -59,7 +59,7 @@ def check_messages():
         browser.close()
         playwright.stop()
     except Exception as e:
-        st.error(f"check_messages error: {e}")
+        st.error(f"check_messages error: {e}\n{traceback.format_exc()}")
 
 def main():
     st.title("Resy Message Monitor")
