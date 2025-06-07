@@ -55,7 +55,7 @@ def check_messages():
         st.write("before playwright start")
         playwright = sync_playwright().start()
         st.write("after playwright start")
-        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox'])
+        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'])
         st.write("after browser launch")
         context = browser.new_context()
         st.write("after context creation")
