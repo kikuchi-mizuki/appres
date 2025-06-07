@@ -56,4 +56,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD /app/healthcheck.sh
 
 # Start Streamlit application (correct CMD for Railway)
-CMD streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0 
+CMD ["sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
