@@ -1,9 +1,15 @@
 FROM python:3.12-slim
 
-# 必要なパッケージをインストール
-RUN apt-get update && apt-get install -y \
+# 必要なパッケージをインストール（分割して実行）
+RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
+    curl \
+    netcat \
+    && rm -rf /var/lib/apt/lists/*
+
+# X11関連パッケージのインストール
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
     libnss3 \
     libnspr4 \
@@ -25,8 +31,6 @@ RUN apt-get update && apt-get install -y \
     libcairo2 \
     libasound2 \
     xvfb \
-    curl \
-    netcat \
     && rm -rf /var/lib/apt/lists/*
 
 # 作業ディレクトリを設定
