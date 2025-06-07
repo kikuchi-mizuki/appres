@@ -55,19 +55,16 @@ EXPOSE $PORT
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD /app/healthcheck.sh
 
-# Create start script with explicit environment variable handling
+# Create start script with direct environment variable handling
 RUN echo '#!/bin/bash\n\
 echo "=== Environment Variables ==="\n\
 env | grep PORT\n\
 echo "==========================="\n\
 \n\
-if [ -z "$PORT" ]; then\n\
-    echo "PORT is not set, using default 8501"\n\
-    PORT=8501\n\
-fi\n\
+PORT=${PORT:-8501}\n\
+echo "Using PORT=$PORT"\n\
 \n\
-echo "Starting Streamlit on port $PORT"\n\
-exec streamlit run app.py --server.port=$PORT --server.address=0.0.0.0' > /app/start.sh \
+exec streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0' > /app/start.sh \
     && chmod +x /app/start.sh
 
 # Start Streamlit application (using explicit bash path)
