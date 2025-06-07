@@ -115,6 +115,28 @@ def check_messages():
                     st.session_state.messages.append(f"Post-login page title: {post_login_title}")
                     st.write(f"Post-login page title: {post_login_title}")
                     print(f"Post-login page title: {post_login_title}")
+                    # ログイン後のエラーやユーザー名要素をチェック
+                    error_elem = page.query_selector(".error, .alert, div:has-text('Invalid'), div:has-text('incorrect'), div:has-text('failed')")
+                    user_elem = page.query_selector("div:has-text('Welcome'), div:has-text('My Reservations'), .user, .profile")
+                    login_form_still = page.query_selector("input[type='email']")
+                    if error_elem:
+                        error_text = error_elem.inner_text()
+                        st.session_state.messages.append(f"Login failed: {error_text}")
+                        st.write(f"Login failed: {error_text}")
+                        print(f"Login failed: {error_text}")
+                    elif login_form_still:
+                        st.session_state.messages.append("Login failed: login form still present.")
+                        st.write("Login failed: login form still present.")
+                        print("Login failed: login form still present.")
+                    elif user_elem:
+                        user_text = user_elem.inner_text()
+                        st.session_state.messages.append(f"Login success! User element: {user_text}")
+                        st.write(f"Login success! User element: {user_text}")
+                        print(f"Login success! User element: {user_text}")
+                    else:
+                        st.session_state.messages.append("Login result unclear: no error or user element found.")
+                        st.write("Login result unclear: no error or user element found.")
+                        print("Login result unclear: no error or user element found.")
                 else:
                     st.session_state.messages.append("Login submit button not found.")
                     st.write("Login submit button not found.")
