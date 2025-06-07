@@ -53,8 +53,8 @@ ENV PORT=8501
 EXPOSE $PORT
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD /app/healthcheck.sh
+# HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+#     CMD /app/healthcheck.sh
 
 # Start Streamlit application
 CMD ["streamlit", "run", "app.py", "--server.port", "8501", "--server.address", "0.0.0.0"] 
