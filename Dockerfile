@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
     libcairo2 \
     libasound2 \
     xvfb \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 作業ディレクトリを設定
@@ -33,6 +34,7 @@ WORKDIR /app
 # 環境変数を設定
 ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
+ENV PORT=8501
 
 # 依存関係ファイルをコピー
 COPY requirements.txt .
@@ -48,35 +50,31 @@ RUN playwright install-deps
 COPY . .
 
 # ポートを公開
-ENV PORT=8501
 EXPOSE $PORT
 
 # 起動スクリプトを作成
 RUN echo '#!/bin/bash\n\
+echo "Starting Xvfb..."\n\
 Xvfb :99 -screen 0 1024x768x16 &\n\
-sleep 20\n\
+sleep 5\n\
+echo "Starting Streamlit..."\n\
 streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 &\n\
-sleep 30\n\
-while true; do\n\
+echo "Waiting for Streamlit to start..."\n\
+for i in {1..30}; do\n\
   if curl -s http://localhost:$PORT/_stcore/health > /dev/null; then\n\
     echo "Streamlit is ready!"\n\
-    break\n\
+    exit 0\n\
   fi\n\
-  echo "Waiting for Streamlit to start..."\n\
-  sleep 5\n\
+  echo "Attempt $i: Waiting for Streamlit..."\n\
+  sleep 10\n\
 done\n\
-tail -f /dev/null' > /app/start.sh \
+echo "Streamlit failed to start"\n\
+exit 1' > /app/start.sh \
     && chmod +x /app/start.sh
 
 # ヘルスチェック用のスクリプトを作成
 RUN echo '#!/bin/bash\n\
-for i in {1..60}; do\n\
-  if curl -s http://localhost:$PORT/_stcore/health > /dev/null; then\n\
-    exit 0\n\
-  fi\n\
-  sleep 5\n\
-done\n\
-exit 1' > /app/healthcheck.sh \
+curl -s http://localhost:$PORT/_stcore/health > /dev/null' > /app/healthcheck.sh \
     && chmod +x /app/healthcheck.sh
 
 # アプリケーションを起動
