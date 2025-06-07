@@ -110,6 +110,11 @@ def check_messages():
                     st.session_state.messages.append("Login attempted!")
                     st.write("Login attempted!")
                     print("Login attempted!")
+                    # ログイン後のページタイトルを取得
+                    post_login_title = page.title()
+                    st.session_state.messages.append(f"Post-login page title: {post_login_title}")
+                    st.write(f"Post-login page title: {post_login_title}")
+                    print(f"Post-login page title: {post_login_title}")
                 else:
                     st.session_state.messages.append("Login submit button not found.")
                     st.write("Login submit button not found.")
