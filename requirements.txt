@@ -6,4 +6,6 @@ streamlit-extras==0.3.4
 httpx>=0.24.0
 flask==3.0.0
 requests
-streamlit-autorefresh 
+streamlit-autorefresh
+tornado==6.3.3
+protobuf==4.25.3 
