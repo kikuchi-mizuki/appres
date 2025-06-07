@@ -115,6 +115,70 @@ def display_screenshot(page, caption):
     except Exception as e:
         log_error(f"Display screenshot error: {caption}", e)
 
+def check_login_state(page):
+    """ログイン状態を詳細にチェック"""
+    log_debug("Checking login state...")
+    
+    # ユーザー要素のセレクタを拡充
+    user_selectors = [
+        "div:has-text('Welcome')",
+        "div:has-text('My Reservations')",
+        ".user",
+        ".profile",
+        "a:has-text('Sign Out')",
+        "a:has-text('My Reservations')",
+        "a:has-text('Profile')",
+        "button:has-text('Sign Out')",
+        "[data-test='user-menu']",
+        "[data-test='profile-menu']",
+        ".user-menu",
+        ".profile-menu"
+    ]
+    
+    # エラー要素のセレクタを拡充
+    error_selectors = [
+        ".error",
+        ".alert",
+        "div:has-text('Invalid')",
+        "div:has-text('incorrect')",
+        "div:has-text('failed')",
+        "div:has-text('error')",
+        "div:has-text('try again')",
+        "span:has-text('error')",
+        "span:has-text('invalid')",
+        "[data-test='error-message']"
+    ]
+    
+    # ユーザー要素のチェック
+    for selector in user_selectors:
+        element = page.query_selector(selector)
+        if element:
+            text = element.inner_text()
+            log_debug(f"Found user element with selector '{selector}': {text}")
+            return True, f"Login success! Found: {text}"
+    
+    # エラー要素のチェック
+    for selector in error_selectors:
+        element = page.query_selector(selector)
+        if element:
+            text = element.inner_text()
+            log_debug(f"Found error element with selector '{selector}': {text}")
+            return False, f"Login failed: {text}"
+    
+    # ログインフォームの存在チェック
+    login_form = page.query_selector("input[type='email'], input[type='password']")
+    if login_form:
+        log_debug("Login form is still present")
+        return False, "Login failed: login form still present"
+    
+    # ページのURLをチェック
+    current_url = page.url
+    log_debug(f"Current URL: {current_url}")
+    if "login" in current_url.lower():
+        return False, "Login failed: still on login page"
+    
+    return None, "Login result unclear: no definitive indicators found"
+
 def check_messages():
     try:
         log_debug("Starting check_messages")
@@ -208,13 +272,25 @@ def check_messages():
                         
                         display_screenshot(page, "Before Click")
                         
+                        # クリック前のURLを記録
+                        pre_click_url = page.url
+                        log_debug(f"Pre-click URL: {pre_click_url}")
+                        
                         submit_btn.click(force=True)
+                        
                         # クリック後の読み込みを待つ
                         try:
                             page.wait_for_load_state("domcontentloaded", timeout=10000)
                             log_debug("Post-submit page load completed")
                         except Exception as e:
                             log_debug(f"Post-submit load timeout (non-critical): {str(e)}")
+                        
+                        # ページ遷移を待つ
+                        try:
+                            page.wait_for_url(lambda url: url != pre_click_url, timeout=10000)
+                            log_debug("URL changed after login")
+                        except Exception as e:
+                            log_debug(f"URL change timeout (non-critical): {str(e)}")
                         
                         time.sleep(3)
                         log_debug("Submit button clicked")
@@ -228,21 +304,14 @@ def check_messages():
                     post_login_title = page.title()
                     log_debug(f"Post-login page title: {post_login_title}")
                     
-                    # ログイン後の状態チェック
-                    error_elem = page.query_selector(".error, .alert, div:has-text('Invalid'), div:has-text('incorrect'), div:has-text('failed')")
-                    user_elem = page.query_selector("div:has-text('Welcome'), div:has-text('My Reservations'), .user, .profile")
-                    login_form_still = page.query_selector("input[type='email']")
-                    
-                    if error_elem:
-                        error_text = error_elem.inner_text()
-                        log_error(f"Login failed: {error_text}")
-                    elif login_form_still:
-                        log_error("Login failed: login form still present")
-                    elif user_elem:
-                        user_text = user_elem.inner_text()
-                        log_debug(f"Login success! User element: {user_text}")
+                    # ログイン状態を詳細にチェック
+                    login_success, login_message = check_login_state(page)
+                    if login_success is True:
+                        log_debug(login_message)
+                    elif login_success is False:
+                        log_error(login_message)
                     else:
-                        log_error("Login result unclear: no error or user element found")
+                        log_error(login_message)
                     
                     # HTMLスニペットの出力
                     html_snippet = page.content()[:1000]
