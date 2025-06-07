@@ -104,7 +104,7 @@ def check_messages():
                 if submit_btn:
                     submit_btn.wait_for_element_state("visible")
                     submit_btn.wait_for_element_state("enabled")
-                    submit_btn.click()
+                    submit_btn.click(force=True)
                     import time
                     time.sleep(3)
                     st.session_state.messages.append("Login attempted!")
