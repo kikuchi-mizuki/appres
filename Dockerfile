@@ -55,5 +55,5 @@ EXPOSE $PORT
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD /app/healthcheck.sh
 
-# Start Streamlit application
-CMD ["/bin/sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
+# Start Streamlit application (debug: print PORT value)
+CMD ["/bin/sh", "-c", "echo PORT=$PORT && streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
