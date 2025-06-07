@@ -52,8 +52,8 @@ ENV PORT=8501
 EXPOSE $PORT
 
 # ヘルスチェック用のスクリプトを作成
-RUN echo '#!/bin/bash\ncurl -f http://localhost:$PORT/_stcore/health || exit 1' > /app/healthcheck.sh \
+RUN echo '#!/bin/bash\nfor i in {1..30}; do\n  curl -f http://localhost:$PORT/_stcore/health && exit 0\n  sleep 2\ndone\nexit 1' > /app/healthcheck.sh \
     && chmod +x /app/healthcheck.sh
 
 # アプリケーションを起動
-CMD Xvfb :99 -screen 0 1024x768x16 & streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 
+CMD Xvfb :99 -screen 0 1024x768x16 & sleep 10 && streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 
