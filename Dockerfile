@@ -57,36 +57,10 @@ COPY . .
 # ポートを公開
 EXPOSE $PORT
 
-# 起動スクリプトを作成
-RUN echo '#!/bin/bash\n\
-set -e\n\
-echo "Starting Xvfb..."\n\
-Xvfb :99 -screen 0 1024x768x16 &\n\
-sleep 5\n\
-echo "Starting Streamlit..."\n\
-streamlit run app.py --server.port=$PORT --server.address=0.0.0.0 &\n\
-echo "Waiting for Streamlit to start..."\n\
-for i in {1..30}; do\n\
-  echo "Attempt $i: Checking Streamlit..."\n\
-  if nc -z localhost $PORT; then\n\
-    echo "Port $PORT is open"\n\
-    if curl -s http://localhost:$PORT/_stcore/health > /dev/null; then\n\
-      echo "Streamlit is ready!"\n\
-      tail -f /dev/null\n\
-      exit 0\n\
-    fi\n\
-  fi\n\
-  echo "Waiting 10 seconds..."\n\
-  sleep 10\n\
-done\n\
-echo "Streamlit failed to start"\n\
-exit 1' > /app/start.sh \
-    && chmod +x /app/start.sh
-
 # ヘルスチェック用のスクリプトを作成
 RUN echo '#!/bin/bash\n\
 nc -z localhost $PORT && curl -s http://localhost:$PORT/_stcore/health > /dev/null' > /app/healthcheck.sh \
     && chmod +x /app/healthcheck.sh
 
 # アプリケーションを起動
-CMD ["/app/start.sh"] 
+CMD ["streamlit", "run", "app.py", "--server.port", "$PORT", "--server.address", "0.0.0.0"] 
