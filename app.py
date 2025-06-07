@@ -21,4 +21,41 @@ if 'messages' not in st.session_state:
 if 'last_check' not in st.session_state:
     st.session_state.last_check = None
 
-st.write("Hello, world! (init OK)") 
+# --- 関数定義のみ復元 ---
+def setup_browser():
+    pass
+
+def cleanup_browser():
+    pass
+
+def get_latest_message(page, url):
+    pass
+
+def get_latest_message_in_thread(page, url):
+    pass
+
+def get_all_thread_links(page, url):
+    pass
+
+def get_partner_name_and_messages(page, url):
+    pass
+
+def send_reply(page, message):
+    pass
+
+def generate_reply(message, persona, partner_name, model_choice):
+    pass
+
+def import_yyc_cookies_from_obj(driver, cookies):
+    pass
+
+def check_messages():
+    pass
+
+def main():
+    pass
+
+def app():
+    pass
+
+st.write("Hello, world! (functions OK)") 
