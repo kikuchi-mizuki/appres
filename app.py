@@ -369,15 +369,19 @@ def yyc_login_test():
         
         # メールアドレス欄
         email_input = page.query_selector("input[type='text'], input[type='email']")
-        # パスワード欄
-        password_input = page.query_selector("input[type='password']")
+        # すべてのパスワードinputを列挙
+        pw_inputs = page.query_selector_all("input[type='password']")
+        for i, pw in enumerate(pw_inputs):
+            name = pw.get_attribute('name')
+            log_debug(f"password_input[{i}]: name={name}")
         # ログインボタン
         login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
         
-        if email_input and password_input and login_btn:
+        if email_input and pw_inputs and login_btn:
             email_input.fill(user_email)
-            password_input.fill(user_password)
-            log_debug("ログインフォーム入力完了")
+            for pw in pw_inputs:
+                pw.fill(user_password)
+            log_debug("ログインフォーム入力完了（全パスワード欄に入力）")
             display_screenshot(page, "YYCログインフォーム入力後")
             login_btn.click()
             page.wait_for_load_state("domcontentloaded", timeout=10000)
@@ -411,6 +415,9 @@ def yyc_login_test():
             captcha_img = page.query_selector("img[src*='captcha'], img[alt*='認証'], img[alt*='captcha']")
             if captcha_img:
                 log_debug(f"CAPTCHA画像検出: {captcha_img.get_attribute('src')}")
+            # CAPTCHA inputの存在チェック
+            if page.query_selector("[name='cf-turnstile-response'], [name='g-recaptcha-response']"):
+                log_debug("CAPTCHAが検出されました。自動ログインは困難です。手動認証が必要です。")
         else:
             log_error("ログインフォーム要素が見つかりません")
         context.close()
