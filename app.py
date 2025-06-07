@@ -13,12 +13,13 @@ import json
 import traceback
 from streamlit_autorefresh import st_autorefresh
 import requests
+from webdriver_manager.chrome import ChromeDriverManager
 
 # 環境変数の読み込み
 load_dotenv()
 
 def setup_driver():
-    """Seleniumドライバーのセットアップ（手動指定chromedriver）"""
+    """Seleniumドライバーのセットアップ（自動ダウンロード）"""
     chrome_options = Options()
     # ヘッドレスモードを有効化
     chrome_options.add_argument("--headless=new")
@@ -26,8 +27,13 @@ def setup_driver():
     chrome_options.add_argument("--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
     # Selenium検知回避
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    driver_path = os.path.join(os.getcwd(), "chromedriver")
-    service = Service(driver_path)
+    # Linux環境用の追加オプション
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    
+    # chromedriverを自動ダウンロード
+    service = Service(ChromeDriverManager().install())
+    
     driver = webdriver.Chrome(service=service, options=chrome_options)
     # navigator.webdriverをFalseに偽装
     driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
