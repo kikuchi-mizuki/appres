@@ -137,6 +137,19 @@ def check_messages():
                         st.session_state.messages.append("Login result unclear: no error or user element found.")
                         st.write("Login result unclear: no error or user element found.")
                         print("Login result unclear: no error or user element found.")
+                    # デバッグ用: HTMLスニペットをmessagesに表示
+                    html_snippet = page.content()[:1000]
+                    st.session_state.messages.append(f"HTML snippet: {html_snippet}")
+                    st.write("HTML snippet (first 1000 chars):")
+                    st.code(html_snippet)
+                    print(f"HTML snippet: {html_snippet}")
+                    # 追加のユーザー要素検出
+                    user_elem2 = page.query_selector("a:has-text('Sign Out'), a:has-text('My Reservations'), a:has-text('Profile'), button:has-text('Sign Out')")
+                    if user_elem2:
+                        user2_text = user_elem2.inner_text()
+                        st.session_state.messages.append(f"Login success! User element2: {user2_text}")
+                        st.write(f"Login success! User element2: {user2_text}")
+                        print(f"Login success! User element2: {user2_text}")
                 else:
                     st.session_state.messages.append("Login submit button not found.")
                     st.write("Login submit button not found.")
