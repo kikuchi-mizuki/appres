@@ -63,4 +63,4 @@ exec streamlit run app.py --server.port=${PORT} --server.address=0.0.0.0' > /app
     && chmod +x /app/start.sh
 
 # Start Streamlit application
-CMD ["/bin/bash", "-c", "/app/start.sh"] 
+CMD ["sh", "-c", "streamlit run app.py --server.port=$PORT --server.address=0.0.0.0"] 
