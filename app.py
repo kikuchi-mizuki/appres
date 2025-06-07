@@ -8,31 +8,59 @@ import json
 import traceback
 from streamlit_autorefresh import st_autorefresh
 import requests
+from datetime import datetime, timedelta
+import pytz
 
 # 環境変数の読み込み
 load_dotenv()
 
+# Initialize session state
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
+if 'last_check' not in st.session_state:
+    st.session_state.last_check = None
+
+if 'browser' not in st.session_state:
+    st.session_state.browser = None
+
+if 'context' not in st.session_state:
+    st.session_state.context = None
+
+if 'playwright' not in st.session_state:
+    st.session_state.playwright = None
+
 def setup_browser():
-    """Playwrightブラウザのセットアップ"""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(
-        headless=True,
-        args=[
-            '--disable-blink-features=AutomationControlled',
-            '--no-sandbox',
-            '--disable-dev-shm-usage'
-        ]
-    )
-    context = browser.new_context(
-        user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-    )
-    # Selenium検知回避
-    context.add_init_script("""
-        Object.defineProperty(navigator, 'webdriver', {
-            get: () => undefined
-        });
-    """)
-    return playwright, browser, context
+    """Initialize browser with retry mechanism"""
+    max_retries = 3
+    retry_delay = 5
+    
+    for attempt in range(max_retries):
+        try:
+            playwright = sync_playwright().start()
+            browser = playwright.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-setuid-sandbox']
+            )
+            context = browser.new_context()
+            return playwright, browser, context
+        except Exception as e:
+            if attempt < max_retries - 1:
+                st.warning(f"Browser setup attempt {attempt + 1} failed: {str(e)}. Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                st.error(f"Failed to setup browser after {max_retries} attempts: {str(e)}")
+                raise
+
+def cleanup_browser():
+    """Cleanup browser resources"""
+    if st.session_state.browser:
+        st.session_state.browser.close()
+    if st.session_state.playwright:
+        st.session_state.playwright.stop()
+    st.session_state.browser = None
+    st.session_state.context = None
+    st.session_state.playwright = None
 
 def get_latest_message(page, url):
     """YYCから最新メッセージの本文を取得"""
@@ -242,178 +270,58 @@ def import_yyc_cookies_from_obj(driver, cookies):
         st.error(f"Cookie内容: {cookies}")
         return False
 
-def main():
-    st.title("YYCメッセージ返信アシスタント")
-    st.sidebar.header("あなたのプロフィール")
-    persona = st.sidebar.text_input("あなたのペルソナを入力してください", "25歳のOLで、明るく社交的な性格")
-    # サイドバー: モデル選択
-    model_choice = st.sidebar.selectbox("使用するモデル", ["gpt-3.5-turbo", "gpt-4o"])
-
-    # サイドバー: Slack/LINE通知設定
-    slack_webhook = st.sidebar.text_input("Slack Webhook URL", "")
-    line_token = st.sidebar.text_input("LINE Notifyトークン", "")
-
-    # サイドバー: 複数Cookie管理
-    if "cookie_files" not in st.session_state:
-        st.session_state["cookie_files"] = {}
-
-    uploaded_cookie = st.sidebar.file_uploader("Cookieファイルを追加", type=["json"], key="cookie_upload")
-    if uploaded_cookie is not None:
-        cookies = json.load(uploaded_cookie)
-        cookie_name = st.sidebar.text_input("このCookieの名前", value=f"user_{len(st.session_state['cookie_files'])+1}")
-        if st.sidebar.button("Cookieを保存", key="save_cookie"):
-            st.session_state["cookie_files"][cookie_name] = cookies
-            st.sidebar.success(f"{cookie_name} を保存しました")
-
-    cookie_names = list(st.session_state["cookie_files"].keys())
-    selected_cookie = st.sidebar.selectbox("使用するCookie", cookie_names) if cookie_names else None
-    if selected_cookie:
-        cookies = st.session_state["cookie_files"][selected_cookie]
-        st.sidebar.success(f"{selected_cookie} を使用中")
-    else:
-        cookies = None
-
-    # サイドバー: auto_check, interval, num_threads
-    auto_check = st.sidebar.checkbox("定期チェックを有効にする", value=False)
-    interval = st.sidebar.number_input("チェック間隔（秒）", min_value=10, max_value=600, value=30, step=10)
-    num_threads = st.sidebar.number_input("取得するスレッド数", min_value=1, max_value=50, value=5, step=1)
-    yyc_url = "https://www.yyc.co.jp/my/mail_box/?filter=not_res"
-
-    # 高度な差分検知: スレッドURL+最新メッセージ本文
-    last_message_texts = st.session_state.get("last_message_texts", {})
-    current_message_texts = {}
-    new_messages = {}
-
-    def send_notification(text):
-        if slack_webhook:
-            try:
-                requests.post(slack_webhook, json={"text": text})
-            except Exception as e:
-                st.sidebar.error(f"Slack通知失敗: {e}")
-        if line_token:
-            try:
-                requests.post(
-                    "https://notify-api.line.me/api/notify",
-                    headers={"Authorization": f"Bearer {line_token}"},
-                    data={"message": text}
-                )
-            except Exception as e:
-                st.sidebar.error(f"LINE通知失敗: {e}")
-
-    if auto_check and cookies:
-        count = st_autorefresh(interval=interval * 1000, limit=None, key="auto_refresh")
-        playwright, browser, context = setup_browser()
-        page = context.new_page()
+def check_messages():
+    """Check for new messages using Playwright"""
+    try:
+        if not st.session_state.browser:
+            st.session_state.playwright, st.session_state.browser, st.session_state.context = setup_browser()
         
-        # Cookieを設定
-        for cookie in cookies:
-            context.add_cookies([{
-                "name": cookie.get("name"),
-                "value": cookie.get("value"),
-                "domain": cookie.get("domain"),
-                "path": cookie.get("path", "/"),
-                "secure": cookie.get("secure", False),
-                "httpOnly": cookie.get("httpOnly", False),
-            }])
-            
-        thread_links = get_all_thread_links(page, yyc_url)[:num_threads]
-        for link in thread_links:
-            partner_name, messages, latest_timestamp = get_partner_name_and_messages(page, link)
-            latest_msg = messages[-1] if messages else ""
-            current_message_texts[link] = latest_msg
-            if link not in last_message_texts or last_message_texts[link] != latest_msg:
-                new_messages[link] = (partner_name, latest_msg)
-                
-        browser.close()
-        playwright.stop()
+        page = st.session_state.context.new_page()
+        page.goto('https://app.resy.com/')
+        
+        # Wait for the page to load
+        page.wait_for_load_state('networkidle')
+        
+        # Get all messages
+        messages = page.query_selector_all('.message')
+        new_messages = []
+        
+        for message in messages:
+            text = message.inner_text()
+            if text not in [m['text'] for m in st.session_state.messages]:
+                new_messages.append({
+                    'text': text,
+                    'timestamp': datetime.now(pytz.UTC).isoformat()
+                })
         
         if new_messages:
-            st.session_state["last_message_texts"] = current_message_texts
-            for link, (partner_name, msg) in new_messages.items():
-                st.success(f"新着: {partner_name} - {msg}")
-            # 通知送信
-            notify_text = "\n".join([f"{partner_name}: {msg}" for partner_name, msg in new_messages.values()])
-            send_notification(f"YYC新着メッセージ:\n{notify_text}")
-        else:
-            st.session_state["last_message_texts"] = current_message_texts
+            st.session_state.messages.extend(new_messages)
+            st.session_state.last_check = datetime.now(pytz.UTC).isoformat()
+        
+        page.close()
+        
+    except Exception as e:
+        st.error(f"Error checking messages: {str(e)}")
+        cleanup_browser()
 
-    if st.button("全スレッドの最新メッセージを取得・返信生成", use_container_width=True):
-        if yyc_url and cookies is not None:
-            playwright, browser, context = setup_browser()
-            page = context.new_page()
-            
-            # Cookieを設定
-            for cookie in cookies:
-                context.add_cookies([{
-                    "name": cookie.get("name"),
-                    "value": cookie.get("value"),
-                    "domain": cookie.get("domain"),
-                    "path": cookie.get("path", "/"),
-                    "secure": cookie.get("secure", False),
-                    "httpOnly": cookie.get("httpOnly", False),
-                }])
-                
-            with st.spinner("スレッド一覧を取得中..."):
-                thread_links = get_all_thread_links(page, yyc_url)[:num_threads]
-                results = []
-                for link in thread_links:
-                    partner_name, messages, latest_timestamp = get_partner_name_and_messages(page, link)
-                    if messages:
-                        reply = generate_reply(messages[-1], persona, partner_name, model_choice)
-                        results.append((link, partner_name, messages, reply, latest_timestamp))
-                        
-            browser.close()
-            playwright.stop()
-            st.session_state["results"] = results
-        else:
-            st.warning("Cookieファイルをアップロードしてください")
-
-    # メッセージ一覧の表示・コピー＆削除
-    if "results" in st.session_state:
-        results = st.session_state["results"]
-        for idx, (link, partner_name, messages, reply, latest_timestamp) in enumerate(results):
-            st.write(f"スレッド: {link}")
-            st.write(f"相手: {partner_name}")
-            latest_msg = messages[-1] if messages else ""
-            st.markdown(f"**最新メッセージ：**\n{latest_msg}")
-            st.markdown(f"**返信案：**\n{reply}")
-            key_suffix = f"{idx}_{link}_{partner_name}_{latest_timestamp}"
-            copied = st.session_state.get(f"copied_copy_{key_suffix}", False)
-            sent = st.session_state.get(f"sent_{key_suffix}", False)
-            if st.button("コピー", key=f"copy_{key_suffix}", use_container_width=True):
-                st.session_state[f"copied_copy_{key_suffix}"] = True
-                st.success("コピーしました！")
-            if st.button("送信", key=f"send_{key_suffix}", use_container_width=True):
-                playwright, browser, context = setup_browser()
-                page = context.new_page()
-                
-                # Cookieを設定
-                for cookie in cookies:
-                    context.add_cookies([{
-                        "name": cookie.get("name"),
-                        "value": cookie.get("value"),
-                        "domain": cookie.get("domain"),
-                        "path": cookie.get("path", "/"),
-                        "secure": cookie.get("secure", False),
-                        "httpOnly": cookie.get("httpOnly", False),
-                    }])
-                    
-                try:
-                    result = send_reply(page, reply)
-                    if result:
-                        st.session_state[f"sent_{key_suffix}"] = True
-                        st.success("送信しました！")
-                    else:
-                        st.error("送信失敗（ポイント不足等）")
-                except Exception as e:
-                    st.error(f"送信に失敗: {e}")
-                finally:
-                    browser.close()
-                    playwright.stop()
-            if copied:
-                st.info("コピー済み")
-            if sent:
-                st.info("送信済み")
+def main():
+    st.title("Resy Message Monitor")
+    
+    # Check for new messages every 5 minutes
+    if (not st.session_state.last_check or 
+        datetime.now(pytz.UTC) - datetime.fromisoformat(st.session_state.last_check) > timedelta(minutes=5)):
+        check_messages()
+    
+    # Display messages
+    for message in st.session_state.messages:
+        st.write(f"Message: {message['text']}")
+        st.write(f"Time: {message['timestamp']}")
+        st.write("---")
+    
+    # Add refresh button
+    if st.button("Refresh Messages"):
+        check_messages()
+        st.experimental_rerun()
 
 if __name__ == "__main__":
     st.markdown('''
