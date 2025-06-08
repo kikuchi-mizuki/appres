@@ -243,6 +243,37 @@ def generate_reply(message, persona):
         log_error("返信生成エラー", e)
         return "返信の生成に失敗しました。"
 
+def check_cookie_valid(email):
+    try:
+        with sync_playwright().start() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context()
+            # cookie読み込み（json/pkl両対応）
+            cookie_file_json = os.path.join(COOKIES_DIR, f"{email}.json")
+            cookie_file_pkl = os.path.join(COOKIES_DIR, f"{email}.pkl")
+            cookies = None
+            if os.path.exists(cookie_file_json):
+                with open(cookie_file_json, "r", encoding="utf-8") as f:
+                    cookies = json.load(f)
+            elif os.path.exists(cookie_file_pkl):
+                with open(cookie_file_pkl, "rb") as f:
+                    cookies = pickle.load(f)
+            if cookies:
+                context.add_cookies(cookies)
+                page = context.new_page()
+                page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=15000)
+                time.sleep(2)
+                # ログイン状態の判定（例：メッセージページの要素が見えるか）
+                if page.query_selector("a:has-text('マイページ'), a:has-text('メッセージ'), .user-menu, .profile-menu"):
+                    context.close()
+                    browser.close()
+                    return True
+                context.close()
+                browser.close()
+        return False
+    except Exception as e:
+        return False
+
 def main():
     st.title("YYC メッセージアシスタント")
     
@@ -277,6 +308,12 @@ def main():
                         st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
                     else:
                         st.sidebar.success("cookieファイル（json）を保存しました！")
+                        # 有効性チェック
+                        with st.spinner("cookieの有効性を確認中..."):
+                            if check_cookie_valid(email):
+                                st.sidebar.success("cookieは有効です（YYCにログインできます）")
+                            else:
+                                st.sidebar.error("cookieは無効です（YYCにログインできません）")
                 except Exception as e:
                     st.sidebar.error(f"cookieファイルの読み込みに失敗しました: {e}")
             else:
@@ -293,6 +330,12 @@ def main():
                         st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
                     else:
                         st.sidebar.success("cookieファイル（pkl）を保存しました！")
+                        # 有効性チェック
+                        with st.spinner("cookieの有効性を確認中..."):
+                            if check_cookie_valid(email):
+                                st.sidebar.success("cookieは有効です（YYCにログインできます）")
+                            else:
+                                st.sidebar.error("cookieは無効です（YYCにログインできません）")
                 except Exception as e:
                     st.sidebar.error(f"cookieファイルの読み込みに失敗しました: {e}")
     
