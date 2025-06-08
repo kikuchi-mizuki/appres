@@ -245,10 +245,20 @@ def main():
         st.session_state.user_email = ""
     
     st.session_state.user_email = st.sidebar.text_input("Email", value=st.session_state.user_email, key="login_email")
-    # パスワード欄は削除
-    # if 'user_password' not in st.session_state:
-    #     st.session_state.user_password = ""
-    # st.session_state.user_password = st.sidebar.text_input("Password", type="password", value=st.session_state.user_password, key="login_password")
+
+    # cookieファイルアップロード機能
+    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type="pkl")
+    if uploaded_file is not None:
+        email = st.session_state.user_email
+        if not email:
+            st.sidebar.error("先にメールアドレスを入力してください")
+        else:
+            cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
+            os.makedirs(cookies_dir, exist_ok=True)
+            file_path = os.path.join(cookies_dir, f"{email}.pkl")
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.read())
+            st.sidebar.success("cookieファイルを保存しました！")
     
     # サイドバーでペルソナ設定
     st.sidebar.header("ペルソナ設定")
