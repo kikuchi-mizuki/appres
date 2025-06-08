@@ -14,6 +14,8 @@ import re
 import base64
 from io import BytesIO
 import logging
+import pickle
+import os.path
 
 # ロギングの設定
 logging.basicConfig(
@@ -24,6 +26,69 @@ logger = logging.getLogger(__name__)
 
 # 環境変数の読み込み
 load_dotenv()
+
+# OpenAI APIキーの設定
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# クッキー保存用のディレクトリ
+COOKIES_DIR = "cookies"
+if not os.path.exists(COOKIES_DIR):
+    os.makedirs(COOKIES_DIR)
+
+def save_cookies(context, email):
+    """ブラウザのクッキーを保存"""
+    try:
+        cookies = context.cookies()
+        cookie_file = os.path.join(COOKIES_DIR, f"{email}.pkl")
+        with open(cookie_file, 'wb') as f:
+            pickle.dump(cookies, f)
+        log_debug(f"クッキーを保存しました: {cookie_file}")
+    except Exception as e:
+        log_error("クッキー保存エラー", e)
+
+def load_cookies(context, email):
+    """保存されたクッキーを読み込み"""
+    try:
+        cookie_file = os.path.join(COOKIES_DIR, f"{email}.pkl")
+        if os.path.exists(cookie_file):
+            with open(cookie_file, 'rb') as f:
+                cookies = pickle.load(f)
+            context.add_cookies(cookies)
+            log_debug(f"クッキーを読み込みました: {cookie_file}")
+            return True
+        return False
+    except Exception as e:
+        log_error("クッキー読み込みエラー", e)
+        return False
+
+def check_session_valid(page):
+    """セッションが有効かチェック"""
+    try:
+        # ログイン後のページで表示される要素をチェック
+        selectors = [
+            "a:has-text('マイページ')",
+            "a:has-text('メッセージ')",
+            "a:has-text('プロフィール')",
+            ".user-menu",
+            ".profile-menu"
+        ]
+        
+        for selector in selectors:
+            if page.query_selector(selector):
+                log_debug(f"セッション有効: {selector}が見つかりました")
+                return True
+        
+        # ログインページの要素が表示されていないかチェック
+        login_form = page.query_selector("input[type='password']")
+        if not login_form:
+            log_debug("セッション有効: ログインフォームが見つかりません")
+            return True
+            
+        log_debug("セッション無効: ログインが必要です")
+        return False
+    except Exception as e:
+        log_error("セッションチェックエラー", e)
+        return False
 
 # サイドバーでログイン情報を入力
 st.sidebar.header("Login Info")
@@ -36,6 +101,16 @@ if 'messages' not in st.session_state:
 
 if 'last_check' not in st.session_state:
     st.session_state.last_check = None
+
+if 'persona' not in st.session_state:
+    st.session_state.persona = {
+        "name": "優子",
+        "age": 28,
+        "occupation": "OL",
+        "interests": ["カフェ巡り", "旅行", "料理"],
+        "personality": "明るく、フレンドリー",
+        "writing_style": "カジュアルで親しみやすい"
+    }
 
 # --- 関数定義のみ復元 ---
 def setup_browser():
@@ -59,8 +134,49 @@ def get_partner_name_and_messages(page, url):
 def send_reply(page, message):
     pass
 
-def generate_reply(message, persona, partner_name, model_choice):
-    pass
+def generate_reply(message, persona):
+    """ChatGPTで返信文を生成"""
+    try:
+        # プロンプトの作成
+        prompt = f"""
+        以下のメッセージに対する返信を、以下のペルソナに基づいて生成してください。
+        
+        ペルソナ:
+        - 名前: {persona['name']}
+        - 年齢: {persona['age']}歳
+        - 職業: {persona['occupation']}
+        - 趣味: {', '.join(persona['interests'])}
+        - 性格: {persona['personality']}
+        - 文章スタイル: {persona['writing_style']}
+        
+        メッセージ:
+        {message['content']}
+        
+        返信の条件:
+        1. 自然で親しみやすい文章
+        2. 相手のメッセージの内容に適切に反応
+        3. 会話を発展させる要素を含める
+        4. 短すぎず長すぎない適度な長さ
+        5. 絵文字を適度に使用
+        
+        返信文のみを出力してください。
+        """
+        
+        # ChatGPT APIを呼び出し
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。"},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        log_error("返信生成エラー", e)
+        return "返信の生成に失敗しました。"
 
 def import_yyc_cookies_from_obj(driver, cookies):
     pass
@@ -358,6 +474,21 @@ def yyc_login_test():
             viewport={'width': 1280, 'height': 800}
         )
         page = context.new_page()
+        
+        # 保存されたクッキーを読み込み
+        if load_cookies(context, user_email):
+            log_debug("保存されたクッキーでセッションを復元")
+            page.goto("https://www.yyc.co.jp/", wait_until="domcontentloaded", timeout=60000)
+            time.sleep(2)
+            
+            if check_session_valid(page):
+                log_debug("セッションが有効です")
+                display_screenshot(page, "セッション復元後のページ")
+                context.close()
+                browser.close()
+                playwright.stop()
+                return
+        
         log_debug("YYCログインページへ遷移")
         page.goto("https://www.yyc.co.jp/login/", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
@@ -388,6 +519,14 @@ def yyc_login_test():
             time.sleep(2)
             display_screenshot(page, "YYCログイン後ページ")
             log_debug(f"ログイン後タイトル: {page.title()}")
+            
+            # ログイン成功時にクッキーを保存
+            if check_session_valid(page):
+                save_cookies(context, user_email)
+                log_debug("ログイン成功: クッキーを保存しました")
+            else:
+                log_error("ログイン失敗: セッションが無効です")
+            
             # ログイン後ページのbodyタグ内HTML（5000文字）
             try:
                 body_elem = page.query_selector('body')
@@ -398,6 +537,7 @@ def yyc_login_test():
                     log_debug("bodyタグが見つかりません")
             except Exception as e:
                 log_debug(f"bodyタグ抽出エラー: {str(e)}")
+            
             # フォーム内の全input値を出力
             try:
                 inputs = page.query_selector_all('form input')
@@ -407,19 +547,23 @@ def yyc_login_test():
                     log_debug(f"input[{i}]: name={name}, value={value}")
             except Exception as e:
                 log_debug(f"input抽出エラー: {str(e)}")
+            
             # エラー要素の検出
             error_elem = page.query_selector(".error, .alert, .formError, div[style*='color:red'], span[style*='color:red']")
             if error_elem:
                 log_debug(f"エラー要素検出: {error_elem.inner_text()}")
+            
             # CAPTCHA画像の検出
             captcha_img = page.query_selector("img[src*='captcha'], img[alt*='認証'], img[alt*='captcha']")
             if captcha_img:
                 log_debug(f"CAPTCHA画像検出: {captcha_img.get_attribute('src')}")
+            
             # CAPTCHA inputの存在チェック
             if page.query_selector("[name='cf-turnstile-response'], [name='g-recaptcha-response']"):
                 log_debug("CAPTCHAが検出されました。自動ログインは困難です。手動認証が必要です。")
         else:
             log_error("ログインフォーム要素が見つかりません")
+        
         context.close()
         browser.close()
         playwright.stop()
@@ -436,27 +580,104 @@ def yyc_login_test():
         except Exception as cleanup_error:
             log_error("Cleanup error", cleanup_error)
 
-def main():
-    st.title("Resy Message Monitor")
-    log_debug("Application started")
-    
-    st.write("---")
-    st.write("Messages:")
-    for message in st.session_state.messages:
-        st.write(f"- {message}")
-    
-    if st.button("Refresh Messages"):
-        try:
-            check_messages()
-            st.rerun()
-        except Exception as e:
-            log_error("Refresh error", e)
+def get_latest_messages(page):
+    """最新のメッセージを取得"""
+    try:
+        # メッセージページに移動
+        page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=60000)
+        time.sleep(2)
+        
+        # メッセージ一覧を取得
+        message_elements = page.query_selector_all(".message-item, .chat-item")
+        messages = []
+        
+        for element in message_elements:
+            try:
+                # 送信者名
+                sender = element.query_selector(".sender-name, .user-name")
+                sender_name = sender.inner_text() if sender else "不明"
+                
+                # メッセージ本文
+                content = element.query_selector(".message-content, .chat-content")
+                message_text = content.inner_text() if content else ""
+                
+                # 送信日時
+                time_elem = element.query_selector(".message-time, .chat-time")
+                sent_time = time_elem.inner_text() if time_elem else ""
+                
+                if message_text:
+                    messages.append({
+                        "sender": sender_name,
+                        "content": message_text,
+                        "time": sent_time
+                    })
+            except Exception as e:
+                log_error(f"メッセージ要素の解析エラー: {str(e)}")
+                continue
+        
+        return messages
+    except Exception as e:
+        log_error("メッセージ取得エラー", e)
+        return []
 
-    # Streamlit UIにテストボタン追加
-    st.write("---")
-    st.write("YYCログインテスト:")
-    if st.button("YYCログインテスト実行"):
-        yyc_login_test()
+def main():
+    st.title("YYC メッセージアシスタント")
+    
+    # サイドバーでペルソナ設定
+    st.sidebar.header("ペルソナ設定")
+    st.session_state.persona["name"] = st.sidebar.text_input("名前", value=st.session_state.persona["name"])
+    st.session_state.persona["age"] = st.sidebar.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"])
+    st.session_state.persona["occupation"] = st.sidebar.text_input("職業", value=st.session_state.persona["occupation"])
+    st.session_state.persona["interests"] = st.sidebar.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"])).split(", ")
+    st.session_state.persona["personality"] = st.sidebar.text_input("性格", value=st.session_state.persona["personality"])
+    st.session_state.persona["writing_style"] = st.sidebar.text_input("文章スタイル", value=st.session_state.persona["writing_style"])
+    
+    # メッセージ取得ボタン
+    if st.button("最新メッセージを取得"):
+        try:
+            with st.spinner("メッセージを取得中..."):
+                playwright = sync_playwright().start()
+                browser = playwright.chromium.launch(headless=True)
+                context = browser.new_context()
+                page = context.new_page()
+                
+                # 保存されたクッキーを読み込み
+                if load_cookies(context, user_email):
+                    messages = get_latest_messages(page)
+                    if messages:
+                        st.session_state.messages = messages
+                        st.session_state.last_check = datetime.now()
+                    else:
+                        st.warning("メッセージが見つかりませんでした。")
+                else:
+                    st.error("ログインセッションが見つかりません。先にログインしてください。")
+                
+                context.close()
+                browser.close()
+                playwright.stop()
+        except Exception as e:
+            st.error(f"エラーが発生しました: {str(e)}")
+    
+    # メッセージ一覧の表示
+    if st.session_state.messages:
+        st.subheader("最新メッセージ")
+        for i, message in enumerate(st.session_state.messages):
+            with st.expander(f"{message['sender']} - {message['time']}"):
+                st.write(message['content'])
+                
+                # 返信生成ボタン
+                if st.button(f"返信を生成 ({i+1})"):
+                    with st.spinner("返信を生成中..."):
+                        reply = generate_reply(message, st.session_state.persona)
+                        st.text_area("生成された返信", reply, height=150)
+                        
+                        # コピーボタン
+                        if st.button("クリップボードにコピー"):
+                            st.write("返信文をコピーしました！")
+    
+    # 最終更新時刻の表示
+    if st.session_state.last_check:
+        st.write(f"最終更新: {st.session_state.last_check.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     main() 
