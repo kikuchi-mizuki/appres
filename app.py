@@ -81,14 +81,21 @@ def save_cookies(context, email):
         log_error("クッキー保存エラー", e)
 
 def load_cookies(context, email):
-    """保存されたクッキーを読み込み"""
+    """保存されたクッキーを読み込み（pkl/json両対応）"""
     try:
-        cookie_file = os.path.join(COOKIES_DIR, f"{email}.pkl")
-        if os.path.exists(cookie_file):
-            with open(cookie_file, 'rb') as f:
+        cookie_file_pkl = os.path.join(COOKIES_DIR, f"{email}.pkl")
+        cookie_file_json = os.path.join(COOKIES_DIR, f"{email}.json")
+        if os.path.exists(cookie_file_json):
+            with open(cookie_file_json, 'r', encoding='utf-8') as f:
+                cookies = json.load(f)
+            context.add_cookies(cookies)
+            log_debug(f"クッキー（json）を読み込みました: {cookie_file_json}")
+            return True
+        elif os.path.exists(cookie_file_pkl):
+            with open(cookie_file_pkl, 'rb') as f:
                 cookies = pickle.load(f)
             context.add_cookies(cookies)
-            log_debug(f"クッキーを読み込みました: {cookie_file}")
+            log_debug(f"クッキー（pkl）を読み込みました: {cookie_file_pkl}")
             return True
         return False
     except Exception as e:
@@ -247,7 +254,7 @@ def main():
     st.session_state.user_email = st.sidebar.text_input("Email", value=st.session_state.user_email, key="login_email")
 
     # cookieファイルアップロード機能
-    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type="pkl")
+    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type=["pkl", "json"])
     if uploaded_file is not None:
         email = st.session_state.user_email
         if not email:
@@ -255,10 +262,17 @@ def main():
         else:
             cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
             os.makedirs(cookies_dir, exist_ok=True)
-            file_path = os.path.join(cookies_dir, f"{email}.pkl")
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.read())
-            st.sidebar.success("cookieファイルを保存しました！")
+            # 拡張子判定
+            if uploaded_file.name.endswith('.json'):
+                file_path = os.path.join(cookies_dir, f"{email}.json")
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                st.sidebar.success("cookieファイル（json）を保存しました！")
+            else:
+                file_path = os.path.join(cookies_dir, f"{email}.pkl")
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                st.sidebar.success("cookieファイル（pkl）を保存しました！")
     
     # サイドバーでペルソナ設定
     st.sidebar.header("ペルソナ設定")
