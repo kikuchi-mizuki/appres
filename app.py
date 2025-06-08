@@ -95,8 +95,8 @@ def check_session_valid(page):
 
 # サイドバーでログイン情報を入力
 st.sidebar.header("Login Info")
-user_email = st.sidebar.text_input("Email", key="email")
-user_password = st.sidebar.text_input("Password", type="password", key="password")
+user_email = st.sidebar.text_input("Email", key="login_email")
+user_password = st.sidebar.text_input("Password", type="password", key="login_password")
 
 # セッションステートの初期化
 if 'messages' not in st.session_state:
@@ -656,20 +656,20 @@ def main():
     
     # サイドバーでログイン情報を入力
     st.sidebar.header("Login Info")
-    user_email = st.sidebar.text_input("Email", key="email")
-    user_password = st.sidebar.text_input("Password", type="password", key="password")
+    user_email = st.sidebar.text_input("Email", key="login_email")
+    user_password = st.sidebar.text_input("Password", type="password", key="login_password")
     
     # サイドバーでペルソナ設定
     st.sidebar.header("ペルソナ設定")
-    st.session_state.persona["name"] = st.sidebar.text_input("名前", value=st.session_state.persona["name"])
-    st.session_state.persona["age"] = st.sidebar.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"])
-    st.session_state.persona["occupation"] = st.sidebar.text_input("職業", value=st.session_state.persona["occupation"])
-    st.session_state.persona["interests"] = st.sidebar.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"])).split(", ")
-    st.session_state.persona["personality"] = st.sidebar.text_input("性格", value=st.session_state.persona["personality"])
-    st.session_state.persona["writing_style"] = st.sidebar.text_input("文章スタイル", value=st.session_state.persona["writing_style"])
+    st.session_state.persona["name"] = st.sidebar.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
+    st.session_state.persona["age"] = st.sidebar.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
+    st.session_state.persona["occupation"] = st.sidebar.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
+    st.session_state.persona["interests"] = st.sidebar.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests").split(", ")
+    st.session_state.persona["personality"] = st.sidebar.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
+    st.session_state.persona["writing_style"] = st.sidebar.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
     
     # メッセージ取得ボタン
-    if st.button("最新メッセージを取得"):
+    if st.button("最新メッセージを取得", key="fetch_messages"):
         if not user_email or not user_password:
             st.error("メールアドレスとパスワードを入力してください。")
             return
@@ -702,17 +702,17 @@ def main():
     if st.session_state.messages:
         st.subheader("最新メッセージ")
         for i, message in enumerate(st.session_state.messages):
-            with st.expander(f"{message['sender']} - {message['time']}"):
+            with st.expander(f"{message['sender']} - {message['time']}", key=f"message_{i}"):
                 st.write(message['content'])
                 
                 # 返信生成ボタン
-                if st.button(f"返信を生成 ({i+1})"):
+                if st.button(f"返信を生成 ({i+1})", key=f"generate_reply_{i}"):
                     with st.spinner("返信を生成中..."):
                         reply = generate_reply(message, st.session_state.persona)
-                        st.text_area("生成された返信", reply, height=150)
+                        st.text_area("生成された返信", reply, height=150, key=f"reply_text_{i}")
                         
                         # コピーボタン
-                        if st.button("クリップボードにコピー"):
+                        if st.button("クリップボードにコピー", key=f"copy_reply_{i}"):
                             st.write("返信文をコピーしました！")
     
     # 最終更新時刻の表示
