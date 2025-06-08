@@ -590,6 +590,34 @@ def get_latest_messages(page):
         page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
         
+        # ログインページにリダイレクトされているかチェック
+        if "login" in page.url.lower():
+            log_debug("ログインページにリダイレクトされました。ログインを実行します。")
+            # ログインページでフォームを入力
+            email_input = page.query_selector("input[type='text'], input[type='email']")
+            pw_inputs = page.query_selector_all("input[type='password']")
+            login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
+            
+            if email_input and pw_inputs and login_btn:
+                email_input.fill(user_email)
+                for pw in pw_inputs:
+                    pw.fill(user_password)
+                log_debug("ログインフォーム入力完了")
+                login_btn.click()
+                page.wait_for_load_state("domcontentloaded", timeout=10000)
+                time.sleep(2)
+                
+                # ログイン成功時にクッキーを保存
+                if check_session_valid(page):
+                    save_cookies(page.context, user_email)
+                    log_debug("ログイン成功: クッキーを保存しました")
+                else:
+                    log_error("ログイン失敗: セッションが無効です")
+                    return []
+            else:
+                log_error("ログインフォーム要素が見つかりません")
+                return []
+        
         # メッセージ一覧を取得
         message_elements = page.query_selector_all(".message-item, .chat-item")
         messages = []
@@ -626,6 +654,11 @@ def get_latest_messages(page):
 def main():
     st.title("YYC メッセージアシスタント")
     
+    # サイドバーでログイン情報を入力
+    st.sidebar.header("Login Info")
+    user_email = st.sidebar.text_input("Email", key="email")
+    user_password = st.sidebar.text_input("Password", type="password", key="password")
+    
     # サイドバーでペルソナ設定
     st.sidebar.header("ペルソナ設定")
     st.session_state.persona["name"] = st.sidebar.text_input("名前", value=st.session_state.persona["name"])
@@ -637,6 +670,10 @@ def main():
     
     # メッセージ取得ボタン
     if st.button("最新メッセージを取得"):
+        if not user_email or not user_password:
+            st.error("メールアドレスとパスワードを入力してください。")
+            return
+            
         try:
             with st.spinner("メッセージを取得中..."):
                 playwright = sync_playwright().start()
@@ -646,14 +683,14 @@ def main():
                 
                 # 保存されたクッキーを読み込み
                 if load_cookies(context, user_email):
-                    messages = get_latest_messages(page)
-                    if messages:
-                        st.session_state.messages = messages
-                        st.session_state.last_check = datetime.now()
-                    else:
-                        st.warning("メッセージが見つかりませんでした。")
+                    log_debug("保存されたクッキーでセッションを復元")
+                
+                messages = get_latest_messages(page)
+                if messages:
+                    st.session_state.messages = messages
+                    st.session_state.last_check = datetime.now()
                 else:
-                    st.error("ログインセッションが見つかりません。先にログインしてください。")
+                    st.warning("メッセージが見つかりませんでした。")
                 
                 context.close()
                 browser.close()
