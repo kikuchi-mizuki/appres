@@ -2,7 +2,7 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
-from openai import OpenAI
+import openai
 import time
 import json
 import traceback
@@ -31,11 +31,7 @@ load_dotenv()
 api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
-
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://api.openai.com/v1"
-)
+openai.api_key = api_key
 
 # クッキー保存用のディレクトリ
 COOKIES_DIR = "cookies"
@@ -170,7 +166,7 @@ def generate_reply(message, persona):
         """
         
         # ChatGPT APIを呼び出し
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。"},
