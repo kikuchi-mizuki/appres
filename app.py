@@ -35,8 +35,7 @@ openai.api_key = api_key
 
 # クッキー保存用のディレクトリ
 COOKIES_DIR = "cookies"
-if not os.path.exists(COOKIES_DIR):
-    os.makedirs(COOKIES_DIR)
+os.makedirs(COOKIES_DIR, exist_ok=True)
 
 # セッションステートの初期化
 if 'messages' not in st.session_state:
