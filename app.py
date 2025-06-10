@@ -360,10 +360,21 @@ def main():
                 import time
                 try:
                     with sync_playwright() as p:
-                        browser = p.chromium.launch(headless=True)
-                        context = browser.new_context()
+                        browser = p.chromium.launch(headless=False)
+                        context = browser.new_context(
+                            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                            locale="ja-JP"
+                        )
                         page = context.new_page()
+                        page.set_extra_http_headers({
+                            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
+                        })
                         page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
+
+                        # 追加: 要素が現れるまで待つ
+                        page.wait_for_selector("input[name='account']", timeout=10000)
+                        page.wait_for_selector("input[name='password']", timeout=10000)
+                        page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
 
                         # フォーム入力 & ログイン実行
                         email_input = page.query_selector("input[name='account']")
