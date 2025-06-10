@@ -245,7 +245,7 @@ def generate_reply(message, persona):
 
 def check_cookie_valid(email):
     try:
-        with sync_playwright().start() as p:
+        with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context()
             # cookie読み込み（json/pkl両対応）
@@ -362,7 +362,7 @@ def main():
                 from playwright.sync_api import sync_playwright
                 import time
                 try:
-                    with sync_playwright().start() as p:
+                    with sync_playwright() as p:
                         browser = p.chromium.launch(headless=True)
                         context = browser.new_context()
                         page = context.new_page()
@@ -409,7 +409,7 @@ def main():
         
         try:
             with st.spinner("メッセージを取得中..."):
-                playwright = sync_playwright().start()
+                playwright = sync_playwright()
                 browser = playwright.chromium.launch(headless=True)
                 context = browser.new_context()
                 page = context.new_page()
