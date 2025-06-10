@@ -348,6 +348,53 @@ def main():
     st.session_state.persona["personality"] = st.sidebar.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
     st.session_state.persona["writing_style"] = st.sidebar.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
     
+    # --- YYCログインフォーム: cookieを自動保存するUI ---
+    st.sidebar.header("YYCにログインしてcookieを保存")
+    with st.sidebar.form("yyc_login_form"):
+        login_email = st.text_input("YYCのメールアドレス", value=st.session_state.user_email, key="yyc_login_email_form")
+        login_password = st.text_input("YYCのパスワード", type="password", key="yyc_login_pw_form")
+        login_submit = st.form_submit_button("ログインしてcookie保存")
+
+        if login_submit:
+            if not login_email or not login_password:
+                st.sidebar.error("メールアドレスとパスワードを入力してください")
+            else:
+                from playwright.sync_api import sync_playwright
+                import time
+                try:
+                    with sync_playwright().start() as p:
+                        browser = p.chromium.launch(headless=True)
+                        context = browser.new_context()
+                        page = context.new_page()
+                        page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
+
+                        # フォーム入力 & ログイン実行
+                        email_input = page.query_selector("input[type='text'], input[type='email']")
+                        pw_inputs = page.query_selector_all("input[type='password']")
+                        login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
+
+                        if email_input and pw_inputs and login_btn:
+                            email_input.fill(login_email)
+                            for pw in pw_inputs:
+                                pw.fill(login_password)
+                            login_btn.click()
+                            page.wait_for_load_state("domcontentloaded", timeout=10000)
+                            time.sleep(2)
+
+                            if check_session_valid(page):
+                                save_cookies(context, login_email)
+                                st.session_state.user_email = login_email
+                                st.sidebar.success("ログイン成功＆cookieを保存しました！")
+                            else:
+                                st.sidebar.error("ログイン失敗：IDかパスワードが間違っているか、画像認証が必要かもしれません。")
+                        else:
+                            st.sidebar.error("ログインフォームの要素が見つかりませんでした")
+
+                        context.close()
+                        browser.close()
+                except Exception as e:
+                    log_error("Playwrightログイン処理中のエラー", e)
+    
     # メッセージ取得ボタン
     if st.button("最新メッセージを取得", key="fetch_messages"):
         if not st.session_state.user_email:
