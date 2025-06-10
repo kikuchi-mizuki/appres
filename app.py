@@ -141,15 +141,13 @@ def get_latest_messages(page):
         if "login" in page.url.lower():
             log_debug("ログインページにリダイレクトされました。ログインを実行します。")
             # ログインページでフォームを入力
-            email_input = page.query_selector("input[type='text'], input[type='email']")
-            pw_inputs = page.query_selector_all("input[type='password']")
-            login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
+            email_input = page.query_selector("input[name='account']")
+            password_input = page.query_selector("input[name='password']")
+            login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
             
-            if email_input and pw_inputs and login_btn:
+            if email_input and password_input and login_btn:
                 email_input.fill(st.session_state.user_email)
-                for pw in pw_inputs:
-                    pw.fill(st.session_state.user_password)
-                log_debug("ログインフォーム入力完了")
+                password_input.fill(st.session_state.user_password)
                 login_btn.click()
                 page.wait_for_load_state("domcontentloaded", timeout=10000)
                 time.sleep(2)
@@ -368,14 +366,13 @@ def main():
                         page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
 
                         # フォーム入力 & ログイン実行
-                        email_input = page.query_selector("input[type='text'], input[type='email']")
-                        pw_inputs = page.query_selector_all("input[type='password']")
-                        login_btn = page.query_selector("button, input[type='submit'], button:has-text('ログイン'), input[value*='ログイン']")
+                        email_input = page.query_selector("input[name='account']")
+                        password_input = page.query_selector("input[name='password']")
+                        login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
 
-                        if email_input and pw_inputs and login_btn:
+                        if email_input and password_input and login_btn:
                             email_input.fill(login_email)
-                            for pw in pw_inputs:
-                                pw.fill(login_password)
+                            password_input.fill(login_password)
                             login_btn.click()
                             page.wait_for_load_state("domcontentloaded", timeout=10000)
                             time.sleep(2)
