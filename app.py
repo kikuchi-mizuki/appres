@@ -295,22 +295,47 @@ def main():
                 file_path = os.path.join(cookies_dir, f"{email}.json")
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.read())
-                # バリデーション
+                # バリデーション＋Chrome拡張形式→Playwright形式変換
                 try:
                     with open(file_path, "r", encoding="utf-8") as f:
                         cookies = json.load(f)
-                    if not isinstance(cookies, list) or not all(isinstance(c, dict) for c in cookies):
-                        st.sidebar.error("cookieファイルの形式が不正です（リスト形式の辞書である必要があります）")
-                    elif not all("name" in c and "value" in c and "domain" in c for c in cookies):
-                        st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
+                    # Chrome拡張形式ならPlaywright形式に変換
+                    def convert_cookie(c):
+                        # すでにPlaywright形式ならそのまま
+                        if "expires" in c:
+                            return c
+                        return {
+                            "name": c["name"],
+                            "value": c["value"],
+                            "domain": c["domain"],
+                            "path": c.get("path", "/"),
+                            "expires": int(c["expirationDate"]) if "expirationDate" in c else -1,
+                            "httpOnly": c.get("httpOnly", False),
+                            "secure": c.get("secure", False),
+                            "sameSite": (
+                                "None" if c.get("sameSite") in (None, "no_restriction") else
+                                "Lax" if c.get("sameSite") in ("lax", "unspecified") else
+                                "Strict" if c.get("sameSite") == "strict" else "Lax"
+                            )
+                        }
+                    if isinstance(cookies, list) and all(isinstance(c, dict) for c in cookies):
+                        # 変換が必要な場合は変換して上書き保存
+                        if any("expirationDate" in c or "sameSite" in c for c in cookies):
+                            cookies = [convert_cookie(c) for c in cookies]
+                            with open(file_path, "w", encoding="utf-8") as f:
+                                json.dump(cookies, f, ensure_ascii=False, indent=2)
+                        if not all("name" in c and "value" in c and "domain" in c for c in cookies):
+                            st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
+                        else:
+                            st.sidebar.success("cookieファイル（json）を保存しました！")
+                            # 有効性チェック
+                            with st.spinner("cookieの有効性を確認中..."):
+                                if check_cookie_valid(email):
+                                    st.sidebar.success("cookieは有効です（YYCにログインできます）")
+                                else:
+                                    st.sidebar.error("cookieは無効です（YYCにログインできません）")
                     else:
-                        st.sidebar.success("cookieファイル（json）を保存しました！")
-                        # 有効性チェック
-                        with st.spinner("cookieの有効性を確認中..."):
-                            if check_cookie_valid(email):
-                                st.sidebar.success("cookieは有効です（YYCにログインできます）")
-                            else:
-                                st.sidebar.error("cookieは無効です（YYCにログインできません）")
+                        st.sidebar.error("cookieファイルの形式が不正です（リスト形式の辞書である必要があります）")
                 except Exception as e:
                     st.sidebar.error(f"cookieファイルの読み込みに失敗しました: {e}")
             else:
