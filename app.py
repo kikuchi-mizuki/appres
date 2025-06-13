@@ -69,37 +69,26 @@ def log_error(message, error=None):
         print(f"Error details:\n{traceback.format_exc()}")
 
 def save_cookies(context, email):
-    """ブラウザのクッキーを保存"""
+    """ブラウザのセッションストレージを保存（storage_stateを使う）"""
     try:
-        cookies = context.cookies()
-        cookie_file = os.path.join(COOKIES_DIR, f"{email}.pkl")
-        with open(cookie_file, 'wb') as f:
-            pickle.dump(cookies, f)
-        log_debug(f"クッキーを保存しました: {cookie_file}")
+        storage_file = os.path.join(COOKIES_DIR, f"{email}_storage.json")
+        context.storage_state(path=storage_file)
+        log_debug(f"storage_state を保存しました: {storage_file}")
     except Exception as e:
-        log_error("クッキー保存エラー", e)
+        log_error("セッション保存エラー（storage_state）", e)
 
-def load_cookies(context, email):
-    """保存されたクッキーを読み込み（pkl/json両対応）"""
+def load_cookies(browser, email):
+    """保存された storage_state を読み込んで新しい context を生成"""
     try:
-        cookie_file_pkl = os.path.join(COOKIES_DIR, f"{email}.pkl")
-        cookie_file_json = os.path.join(COOKIES_DIR, f"{email}.json")
-        if os.path.exists(cookie_file_json):
-            with open(cookie_file_json, 'r', encoding='utf-8') as f:
-                cookies = json.load(f)
-            context.add_cookies(cookies)
-            log_debug(f"クッキー（json）を読み込みました: {cookie_file_json}")
-            return True
-        elif os.path.exists(cookie_file_pkl):
-            with open(cookie_file_pkl, 'rb') as f:
-                cookies = pickle.load(f)
-            context.add_cookies(cookies)
-            log_debug(f"クッキー（pkl）を読み込みました: {cookie_file_pkl}")
-            return True
-        return False
+        storage_file = os.path.join(COOKIES_DIR, f"{email}_storage.json")
+        if os.path.exists(storage_file):
+            # 新しい context を storage_state を使って作る
+            return browser.new_context(storage_state=storage_file)
+        else:
+            return None
     except Exception as e:
-        log_error("クッキー読み込みエラー", e)
-        return False
+        log_error("セッション復元エラー（storage_state）", e)
+        return None
 
 def check_session_valid(page):
     """セッションが有効かチェック"""
@@ -244,24 +233,13 @@ def check_cookie_valid(email):
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
-            # cookie読み込み（json/pkl両対応）
-            cookie_file_json = os.path.join(COOKIES_DIR, f"{email}.json")
-            cookie_file_pkl = os.path.join(COOKIES_DIR, f"{email}.pkl")
-            cookies = None
-            if os.path.exists(cookie_file_json):
-                with open(cookie_file_json, "r", encoding="utf-8") as f:
-                    cookies = json.load(f)
-            elif os.path.exists(cookie_file_pkl):
-                with open(cookie_file_pkl, "rb") as f:
-                    cookies = pickle.load(f)
-            if cookies:
-                context.add_cookies(cookies)
+            context = load_cookies(browser, email)
+            if context is not None:
                 page = context.new_page()
-                page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=15000)
+                page.goto("https://www.yyc.co.jp/mypage/", wait_until="domcontentloaded", timeout=15000)
                 time.sleep(2)
-                # ログイン状態の判定（例：メッセージページの要素が見えるか）
-                if page.query_selector("a:has-text('マイページ'), a:has-text('メッセージ'), .user-menu, .profile-menu"):
+                # マイページに遷移できれば有効
+                if "mypage" in page.url:
                     context.close()
                     browser.close()
                     return True
@@ -282,7 +260,7 @@ def main():
     st.session_state.user_email = st.sidebar.text_input("Email", value=st.session_state.user_email, key="login_email")
 
     # cookieファイルアップロード機能
-    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type=["pkl", "json"])
+    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type=["json"])
     if uploaded_file is not None:
         email = st.session_state.user_email
         if not email:
@@ -290,76 +268,17 @@ def main():
         else:
             cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
             os.makedirs(cookies_dir, exist_ok=True)
-            # 拡張子判定
-            if uploaded_file.name.endswith('.json'):
-                file_path = os.path.join(cookies_dir, f"{email}.json")
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                # バリデーション＋Chrome拡張形式→Playwright形式変換
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        cookies = json.load(f)
-                    # Chrome拡張形式ならPlaywright形式に変換
-                    def convert_cookie(c):
-                        # すでにPlaywright形式ならそのまま
-                        if "expires" in c:
-                            return c
-                        return {
-                            "name": c["name"],
-                            "value": c["value"],
-                            "domain": c["domain"],
-                            "path": c.get("path", "/"),
-                            "expires": int(c["expirationDate"]) if "expirationDate" in c else -1,
-                            "httpOnly": c.get("httpOnly", False),
-                            "secure": c.get("secure", False),
-                            "sameSite": (
-                                "None" if c.get("sameSite") in (None, "no_restriction") else
-                                "Lax" if c.get("sameSite") in ("lax", "unspecified") else
-                                "Strict" if c.get("sameSite") == "strict" else "Lax"
-                            )
-                        }
-                    if isinstance(cookies, list) and all(isinstance(c, dict) for c in cookies):
-                        # 変換が必要な場合は変換して上書き保存
-                        if any("expirationDate" in c or "sameSite" in c for c in cookies):
-                            cookies = [convert_cookie(c) for c in cookies]
-                            with open(file_path, "w", encoding="utf-8") as f:
-                                json.dump(cookies, f, ensure_ascii=False, indent=2)
-                        if not all("name" in c and "value" in c and "domain" in c for c in cookies):
-                            st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
-                        else:
-                            st.sidebar.success("cookieファイル（json）を保存しました！")
-                            # 有効性チェック
-                            with st.spinner("cookieの有効性を確認中..."):
-                                if check_cookie_valid(email):
-                                    st.sidebar.success("cookieは有効です（YYCにログインできます）")
-                                else:
-                                    st.sidebar.error("cookieは無効です（YYCにログインできません）")
-                    else:
-                        st.sidebar.error("cookieファイルの形式が不正です（リスト形式の辞書である必要があります）")
-                except Exception as e:
-                    st.sidebar.error(f"cookieファイルの読み込みに失敗しました: {e}")
-            else:
-                file_path = os.path.join(cookies_dir, f"{email}.pkl")
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                # バリデーション
-                try:
-                    with open(file_path, "rb") as f:
-                        cookies = pickle.load(f)
-                    if not isinstance(cookies, list) or not all(isinstance(c, dict) for c in cookies):
-                        st.sidebar.error("cookieファイルの形式が不正です（リスト形式の辞書である必要があります）")
-                    elif not all("name" in c and "value" in c and "domain" in c for c in cookies):
-                        st.sidebar.error("cookie情報に必要なキー（name, value, domain）がありません")
-                    else:
-                        st.sidebar.success("cookieファイル（pkl）を保存しました！")
-                        # 有効性チェック
-                        with st.spinner("cookieの有効性を確認中..."):
-                            if check_cookie_valid(email):
-                                st.sidebar.success("cookieは有効です（YYCにログインできます）")
-                            else:
-                                st.sidebar.error("cookieは無効です（YYCにログインできません）")
-                except Exception as e:
-                    st.sidebar.error(f"cookieファイルの読み込みに失敗しました: {e}")
+            # storage_stateファイルとして保存
+            file_path = os.path.join(cookies_dir, f"{email}_storage.json")
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.read())
+            st.sidebar.success("storage_stateファイル（json）を保存しました！")
+            # 有効性チェック
+            with st.spinner("cookieの有効性を確認中..."):
+                if check_cookie_valid(email):
+                    st.sidebar.success("cookieは有効です（YYCにログインできます）")
+                else:
+                    st.sidebar.error("cookieは無効です（YYCにログインできません）")
     
     # サイドバーでペルソナ設定
     st.sidebar.header("ペルソナ設定")
@@ -437,37 +356,28 @@ def main():
         if not st.session_state.user_email:
             st.error("メールアドレスを入力してください。")
             return
-        
-        # cookieファイルの存在チェック
-        cookie_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}.pkl")
-        if not os.path.exists(cookie_file):
+        # storage_stateファイルの存在チェック
+        storage_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}_storage.json")
+        if not os.path.exists(storage_file):
             st.error("cookieファイルがありません。手動でcookieを保存してください。")
             return
-        
         try:
             with st.spinner("メッセージを取得中..."):
                 playwright = sync_playwright()
                 browser = playwright.chromium.launch(headless=True)
-                context = browser.new_context()
-                page = context.new_page()
-                
-                # 保存されたクッキーを読み込み
-                if load_cookies(context, st.session_state.user_email):
-                    log_debug("保存されたクッキーでセッションを復元")
-                else:
+                context = load_cookies(browser, st.session_state.user_email)
+                if context is None:
                     st.error("cookieファイルの読み込みに失敗しました。")
-                    context.close()
                     browser.close()
                     playwright.stop()
                     return
-                
+                page = context.new_page()
                 messages = get_latest_messages(page)
                 if messages:
                     st.session_state.messages = messages
                     st.session_state.last_check = datetime.now()
                 else:
                     st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください。")
-                
                 context.close()
                 browser.close()
                 playwright.stop()
