@@ -372,9 +372,14 @@ def main():
                         page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
 
                         # 追加: 要素が現れるまで待つ
-                        page.wait_for_selector("input[name='account']", timeout=10000)
-                        page.wait_for_selector("input[name='password']", timeout=10000)
-                        page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
+                        try:
+                            page.wait_for_selector("input[name='account']", timeout=10000)
+                            page.wait_for_selector("input[name='password']", timeout=10000)
+                            page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
+                        except Exception as e:
+                            st.write("--- デバッグ用: 取得したHTML ---")
+                            st.write(page.content())
+                            raise e
 
                         # フォーム入力 & ログイン実行
                         email_input = page.query_selector("input[name='account']")
