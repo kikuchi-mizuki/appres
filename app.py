@@ -302,159 +302,166 @@ def check_cookie_valid(email):
 def main():
     if 'user_password' not in st.session_state:
         st.session_state.user_password = ""
+    
+    # メインタイトル
     st.title("YYC メッセージアシスタント")
     
-    # サイドバーでログイン情報を入力
-    st.sidebar.header("Login Info")
-    if 'user_email' not in st.session_state:
-        st.session_state.user_email = ""
-    
-    st.session_state.user_email = st.sidebar.text_input("Email", value=st.session_state.user_email, key="login_email")
-
-    # cookieファイルアップロード機能
-    uploaded_file = st.sidebar.file_uploader("cookieファイルをアップロード", type=["json"])
-    if uploaded_file is not None:
-        email = st.session_state.user_email
-        if not email:
-            st.sidebar.error("先にメールアドレスを入力してください")
-        else:
-            cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
-            os.makedirs(cookies_dir, exist_ok=True)
-            # storage_stateファイルとして保存
-            file_path = os.path.join(cookies_dir, f"{email}_storage.json")
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.read())
-            st.sidebar.success("storage_stateファイル（json）を保存しました！")
-            # 有効性チェック
-            with st.spinner("cookieの有効性を確認中..."):
-                if check_cookie_valid(email):
-                    st.sidebar.success("cookieは有効です（YYCにログインできます）")
-                else:
-                    st.sidebar.error("cookieは無効です（YYCにログインできません）")
-    
-    # サイドバーでペルソナ設定
-    st.sidebar.header("ペルソナ設定")
-    st.session_state.persona["name"] = st.sidebar.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
-    st.session_state.persona["age"] = st.sidebar.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
-    st.session_state.persona["occupation"] = st.sidebar.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
-    st.session_state.persona["interests"] = st.sidebar.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests").split(", ")
-    st.session_state.persona["personality"] = st.sidebar.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
-    st.session_state.persona["writing_style"] = st.sidebar.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
-    
-    # --- YYCログインフォーム: cookieを自動保存するUI ---
-    st.sidebar.header("YYCにログインしてcookieを保存")
-    with st.sidebar.form("yyc_login_form"):
-        login_email = st.text_input("YYCのメールアドレス", value=st.session_state.user_email, key="yyc_login_email_form")
-        login_password = st.text_input("YYCのパスワード", type="password", key="yyc_login_pw_form")
-        login_submit = st.form_submit_button("ログインしてcookie保存")
-
-        if login_submit:
-            if not login_email or not login_password:
-                st.sidebar.error("メールアドレスとパスワードを入力してください")
+    # サイドバーの設定
+    with st.sidebar:
+        st.header("🔐 ログイン設定")
+        
+        # メールアドレス入力
+        if 'user_email' not in st.session_state:
+            st.session_state.user_email = ""
+        st.session_state.user_email = st.text_input("📧 メールアドレス", value=st.session_state.user_email, key="login_email")
+        
+        # cookieファイルアップロード
+        uploaded_file = st.file_uploader("📁 cookieファイルをアップロード", type=["json"])
+        if uploaded_file is not None:
+            email = st.session_state.user_email
+            if not email:
+                st.error("先にメールアドレスを入力してください")
             else:
-                from playwright.sync_api import sync_playwright
-                import time
-                try:
+                cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
+                os.makedirs(cookies_dir, exist_ok=True)
+                file_path = os.path.join(cookies_dir, f"{email}_storage.json")
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                st.success("✅ cookieファイルを保存しました")
+                with st.spinner("cookieの有効性を確認中..."):
+                    if check_cookie_valid(email):
+                        st.success("✅ cookieは有効です")
+                    else:
+                        st.error("❌ cookieは無効です")
+        
+        st.divider()
+        
+        # YYCログインフォーム
+        st.header("🔑 YYCログイン")
+        with st.form("yyc_login_form"):
+            login_email = st.text_input("📧 YYCのメールアドレス", value=st.session_state.user_email, key="yyc_login_email_form")
+            login_password = st.text_input("🔒 YYCのパスワード", type="password", key="yyc_login_pw_form")
+            login_submit = st.form_submit_button("ログインしてcookie保存")
+
+            if login_submit:
+                if not login_email or not login_password:
+                    st.error("メールアドレスとパスワードを入力してください")
+                else:
+                    try:
+                        with sync_playwright() as p:
+                            browser = p.chromium.launch(headless=True)
+                            context = browser.new_context(
+                                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                                locale="ja-JP"
+                            )
+                            page = context.new_page()
+                            page.set_extra_http_headers({
+                                "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
+                            })
+                            page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
+
+                            try:
+                                page.wait_for_selector("input[name='account']", timeout=10000)
+                                page.wait_for_selector("input[name='password']", timeout=10000)
+                                page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
+                            except Exception as e:
+                                st.write("--- デバッグ用: 取得したHTML ---")
+                                st.write(page.content())
+                                raise e
+
+                            email_input = page.query_selector("input[name='account']")
+                            password_input = page.query_selector("input[name='password']")
+                            login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
+
+                            if email_input and password_input and login_btn:
+                                email_input.fill(login_email)
+                                password_input.fill(login_password)
+                                login_btn.click()
+                                page.wait_for_load_state("domcontentloaded", timeout=10000)
+                                time.sleep(2)
+
+                                if check_session_valid(page):
+                                    save_cookies(context, login_email)
+                                    st.session_state.user_email = login_email
+                                    st.success("✅ ログイン成功＆cookieを保存しました")
+                                else:
+                                    st.error("❌ ログイン失敗：IDかパスワードが間違っているか、画像認証が必要かもしれません")
+                            else:
+                                st.error("❌ ログインフォームの要素が見つかりませんでした")
+
+                            context.close()
+                            browser.close()
+                    except Exception as e:
+                        log_error("Playwrightログイン処理中のエラー", e)
+        
+        st.divider()
+        
+        # ペルソナ設定
+        st.header("👤 ペルソナ設定")
+        st.session_state.persona["name"] = st.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
+        st.session_state.persona["age"] = st.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
+        st.session_state.persona["occupation"] = st.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
+        st.session_state.persona["interests"] = st.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests").split(", ")
+        st.session_state.persona["personality"] = st.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
+        st.session_state.persona["writing_style"] = st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
+    
+    # メインコンテンツ
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        # メッセージ取得ボタン
+        if st.button("📥 最新メッセージを取得", key="fetch_messages", use_container_width=True):
+            if not st.session_state.user_email:
+                st.error("メールアドレスを入力してください")
+                return
+            
+            storage_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}_storage.json")
+            if not os.path.exists(storage_file):
+                st.error("cookieファイルがありません。手動でcookieを保存してください")
+                return
+            
+            try:
+                with st.spinner("メッセージを取得中..."):
                     with sync_playwright() as p:
                         browser = p.chromium.launch(headless=True)
-                        context = browser.new_context(
-                            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                            locale="ja-JP"
-                        )
+                        context = load_cookies(browser, st.session_state.user_email)
+                        if context is None:
+                            st.error("cookieファイルの読み込みに失敗しました")
+                            browser.close()
+                            return
                         page = context.new_page()
-                        page.set_extra_http_headers({
-                            "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
-                        })
-                        page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
-
-                        # 追加: 要素が現れるまで待つ
-                        try:
-                            page.wait_for_selector("input[name='account']", timeout=10000)
-                            page.wait_for_selector("input[name='password']", timeout=10000)
-                            page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
-                        except Exception as e:
-                            st.write("--- デバッグ用: 取得したHTML ---")
-                            st.write(page.content())
-                            raise e
-
-                        # フォーム入力 & ログイン実行
-                        email_input = page.query_selector("input[name='account']")
-                        password_input = page.query_selector("input[name='password']")
-                        login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
-
-                        if email_input and password_input and login_btn:
-                            email_input.fill(login_email)
-                            password_input.fill(login_password)
-                            login_btn.click()
-                            page.wait_for_load_state("domcontentloaded", timeout=10000)
-                            time.sleep(2)
-
-                            if check_session_valid(page):
-                                save_cookies(context, login_email)
-                                st.session_state.user_email = login_email
-                                st.sidebar.success("ログイン成功＆cookieを保存しました！")
-                            else:
-                                st.sidebar.error("ログイン失敗：IDかパスワードが間違っているか、画像認証が必要かもしれません。")
+                        messages = get_latest_messages(page)
+                        if messages:
+                            st.session_state.messages = messages
+                            st.session_state.last_check = datetime.now()
                         else:
-                            st.sidebar.error("ログインフォームの要素が見つかりませんでした")
-
+                            st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください")
                         context.close()
                         browser.close()
-                except Exception as e:
-                    log_error("Playwrightログイン処理中のエラー", e)
+            except Exception as e:
+                st.error(f"エラーが発生しました: {str(e)}")
+        
+        # メッセージ一覧の表示
+        if st.session_state.messages:
+            st.subheader("📨 最新メッセージ")
+            for i, message in enumerate(st.session_state.messages):
+                with st.expander(f"👤 {message['sender']} - {message['time']} ({i+1})"):
+                    st.markdown(f"**メッセージ内容:**\n{message['content']}")
+                    
+                    # 返信生成ボタン
+                    if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
+                        with st.spinner("返信を生成中..."):
+                            reply = generate_reply(message, st.session_state.persona)
+                            st.text_area("生成された返信", reply, height=150, key=f"reply_text_{i}")
+                            
+                            # コピーボタン
+                            if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
+                                st.success("✅ 返信文をコピーしました")
     
-    # メッセージ取得ボタン
-    if st.button("最新メッセージを取得", key="fetch_messages"):
-        if not st.session_state.user_email:
-            st.error("メールアドレスを入力してください。")
-            return
-        # storage_stateファイルの存在チェック
-        storage_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}_storage.json")
-        if not os.path.exists(storage_file):
-            st.error("cookieファイルがありません。手動でcookieを保存してください。")
-            return
-        try:
-            with st.spinner("メッセージを取得中..."):
-                from playwright.sync_api import sync_playwright
-                with sync_playwright() as p:
-                    browser = p.chromium.launch(headless=True)
-                    context = load_cookies(browser, st.session_state.user_email)
-                    if context is None:
-                        st.error("cookieファイルの読み込みに失敗しました。")
-                        browser.close()
-                        return
-                    page = context.new_page()
-                    messages = get_latest_messages(page)
-                    if messages:
-                        st.session_state.messages = messages
-                        st.session_state.last_check = datetime.now()
-                    else:
-                        st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください。")
-                    context.close()
-                    browser.close()
-        except Exception as e:
-            st.error(f"エラーが発生しました: {str(e)}")
-    
-    # メッセージ一覧の表示
-    if st.session_state.messages:
-        st.subheader("最新メッセージ")
-        for i, message in enumerate(st.session_state.messages):
-            with st.expander(f"{message['sender']} - {message['time']} ({i+1})"):
-                st.write(message['content'])
-                
-                # 返信生成ボタン
-                if st.button(f"返信を生成", key=f"generate_reply_{i}"):
-                    with st.spinner("返信を生成中..."):
-                        reply = generate_reply(message, st.session_state.persona)
-                        st.text_area("生成された返信", reply, height=150, key=f"reply_text_{i}")
-                        
-                        # コピーボタン
-                        if st.button("クリップボードにコピー", key=f"copy_reply_{i}"):
-                            st.write("返信文をコピーしました！")
-    
-    # 最終更新時刻の表示
-    if st.session_state.last_check:
-        st.write(f"最終更新: {st.session_state.last_check.strftime('%Y-%m-%d %H:%M:%S')}")
+    with col2:
+        # 最終更新時刻の表示
+        if st.session_state.last_check:
+            st.info(f"🕒 最終更新: {st.session_state.last_check.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     main() 
