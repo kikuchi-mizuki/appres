@@ -123,7 +123,7 @@ def get_latest_messages(page):
     """最新のメッセージを取得"""
     try:
         # メッセージページに移動
-        page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=60000)
+        page.goto("https://www.yyc.co.jp/my/mail_box/round_trip?filter=not_res", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
         st.write(f"[デバッグ] 現在のURL: {page.url}")
         
