@@ -31,7 +31,13 @@ load_dotenv()
 api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
     raise ValueError("OPENAI_API_KEY environment variable is not set")
+
+# OpenAIクライアントの設定
 openai.api_key = api_key
+client = openai.OpenAI(
+    api_key=api_key,
+    base_url=os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+)
 
 # クッキー保存用のディレクトリ
 COOKIES_DIR = "cookies"
@@ -262,8 +268,7 @@ def generate_reply(message, persona):
         返信文のみを出力してください。
         """
         
-        # ChatGPT APIを呼び出し（新しい形式）
-        client = openai.OpenAI()
+        # ChatGPT APIを呼び出し
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
