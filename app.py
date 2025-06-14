@@ -126,6 +126,10 @@ def get_latest_messages(page):
         page.goto("https://www.yyc.co.jp/my/mail_box/round_trip?filter=not_res", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
         st.write(f"[デバッグ] 現在のURL: {page.url}")
+        # パスワード未設定時のガード
+        if not hasattr(st.session_state, "user_password") or not st.session_state.user_password:
+            log_error("パスワードが未設定です。サイドバーでパスワードを入力してください。")
+            return []
         
         # ログインページにリダイレクトされているかチェック
         if "login" in page.url.lower():
@@ -251,6 +255,8 @@ def check_cookie_valid(email):
         return False
 
 def main():
+    if 'user_password' not in st.session_state:
+        st.session_state.user_password = ""
     st.title("YYC メッセージアシスタント")
     
     # サイドバーでログイン情報を入力
