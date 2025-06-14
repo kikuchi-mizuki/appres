@@ -125,6 +125,7 @@ def get_latest_messages(page):
         # メッセージページに移動
         page.goto("https://www.yyc.co.jp/message/", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
+        st.write(f"[デバッグ] 現在のURL: {page.url}")
         
         # ログインページにリダイレクトされているかチェック
         if "login" in page.url.lower():
