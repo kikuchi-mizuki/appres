@@ -442,20 +442,34 @@ def main():
         
         # メッセージ一覧の表示
         if st.session_state.messages:
-            st.subheader("📨 最新メッセージ")
-            for i, message in enumerate(st.session_state.messages):
-                with st.expander(f"👤 {message['sender']} - {message['time']} ({i+1})"):
-                    st.markdown(f"**メッセージ内容:**\n{message['content']}")
+            st.subheader("💬 メッセージ一覧")
+            
+            # チャットコンテナを作成
+            chat_container = st.container()
+            
+            with chat_container:
+                for i, message in enumerate(st.session_state.messages):
+                    # 送信者のメッセージ
+                    with st.chat_message("user", avatar="👤"):
+                        st.write(f"**{message['sender']}** ({message['time']})")
+                        st.write(message['content'])
                     
                     # 返信生成ボタン
                     if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
                         with st.spinner("返信を生成中..."):
                             reply = generate_reply(message, st.session_state.persona)
-                            st.text_area("生成された返信", reply, height=150, key=f"reply_text_{i}")
+                            
+                            # 生成された返信をチャットメッセージとして表示
+                            with st.chat_message("assistant", avatar="🤖"):
+                                st.write(reply)
                             
                             # コピーボタン
                             if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
                                 st.success("✅ 返信文をコピーしました")
+                    
+                    # メッセージ間に区切り線を追加
+                    if i < len(st.session_state.messages) - 1:
+                        st.divider()
     
     with col2:
         # 最終更新時刻の表示
