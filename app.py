@@ -146,54 +146,89 @@ def get_latest_messages(page):
     """最新のメッセージを取得"""
     try:
         # メッセージページに移動
+        log_debug("メッセージページに移動します...")
         page.goto("https://www.yyc.co.jp/my/mail_box/round_trip?filter=not_res", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
-        st.write(f"[デバッグ] 現在のURL: {page.url}")
-        # パスワード未設定時のガード（不要なので削除）
-        # if not hasattr(st.session_state, "user_password") or not st.session_state.user_password:
-        #     log_error("パスワードが未設定です。サイドバーでパスワードを入力してください。")
-        #     return []
+        log_debug(f"現在のURL: {page.url}")
         
         # ログインページにリダイレクトされているかチェック
         if "login" in page.url.lower():
-            log_debug(f"[デバッグ] 現在のURL: {page.url}")
+            log_debug(f"ログインページにリダイレクトされました: {page.url}")
             st.error("cookieでログインできませんでした。再度保存してください。")
             return []
         
         # メッセージ一覧を取得
-        message_elements = page.query_selector_all(".message-item, .chat-item")
+        log_debug("メッセージ要素を検索中...")
+        
+        # まず親要素の存在を確認
+        message_list_wrap = page.query_selector(".message_listWrap")
+        if message_list_wrap:
+            log_debug("message_listWrap要素が見つかりました")
+            # 子要素の数を確認
+            children = message_list_wrap.query_selector_all("*")
+            log_debug(f"message_listWrapの子要素数: {len(children)}")
+        else:
+            log_debug("message_listWrap要素が見つかりません")
+        
+        # メッセージ要素を検索（複数のセレクターを試す）
+        message_elements = page.query_selector_all(".mdl_listBox_simple, .message_listWrap > div")
+        log_debug(f"見つかったメッセージ要素の数: {len(message_elements)}")
+        
         if not message_elements:
+            log_debug("メッセージ要素が見つかりません。HTMLの構造を確認します...")
             st.warning("メッセージ要素が見つかりません。セレクターが変更された可能性があります。")
+            
+            # デバッグ用にHTMLの構造を出力
+            log_debug("ページのHTML構造:")
+            html_content = page.content()
             st.text("ページHTMLの先頭一部:")
-            st.code(page.content()[:8000])  # HTMLの先頭を8000文字表示
+            st.code(html_content[:8000])
+            
             return []
         
         messages = []
+        log_debug(f"メッセージ要素の解析を開始します（{len(message_elements)}件）")
         
-        for element in message_elements:
+        for i, element in enumerate(message_elements, 1):
             try:
+                log_debug(f"メッセージ {i} の解析を開始")
+                
                 # 送信者名
-                sender = element.query_selector(".sender-name, .user-name")
+                sender = element.query_selector(".name strong, .thumb + div strong")
                 sender_name = sender.inner_text() if sender else "不明"
+                log_debug(f"送信者: {sender_name}")
                 
                 # メッセージ本文
-                content = element.query_selector(".message-content, .chat-content")
+                content = element.query_selector(".message p, .thumb + div p")
                 message_text = content.inner_text() if content else ""
+                log_debug(f"メッセージ本文: {message_text[:50]}...")
                 
                 # 送信日時
-                time_elem = element.query_selector(".message-time, .chat-time")
+                time_elem = element.query_selector(".date, .thumb + div .date")
                 sent_time = time_elem.inner_text() if time_elem else ""
+                log_debug(f"送信日時: {sent_time}")
+                
+                # 未返信ステータス
+                status = element.query_selector(".msgHistoryStatus.replied")
+                is_unreplied = bool(status)
+                log_debug(f"未返信ステータス: {is_unreplied}")
                 
                 if message_text:
                     messages.append({
                         "sender": sender_name,
                         "content": message_text,
-                        "time": sent_time
+                        "time": sent_time,
+                        "is_unreplied": is_unreplied
                     })
+                    log_debug(f"メッセージ {i} の解析が完了")
+                else:
+                    log_debug(f"メッセージ {i} は本文が空のためスキップ")
+                    
             except Exception as e:
-                log_error(f"メッセージ要素の解析エラー: {str(e)}")
+                log_error(f"メッセージ {i} の解析中にエラーが発生: {str(e)}")
                 continue
         
+        log_debug(f"合計 {len(messages)} 件のメッセージを取得しました")
         return messages
     except Exception as e:
         log_error("メッセージ取得エラー", e)
