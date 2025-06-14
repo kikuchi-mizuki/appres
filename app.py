@@ -262,8 +262,9 @@ def generate_reply(message, persona):
         返信文のみを出力してください。
         """
         
-        # ChatGPT APIを呼び出し
-        response = openai.ChatCompletion.create(
+        # ChatGPT APIを呼び出し（新しい形式）
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。"},
