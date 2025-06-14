@@ -363,24 +363,23 @@ def main():
             return
         try:
             with st.spinner("メッセージを取得中..."):
-                playwright = sync_playwright()
-                browser = playwright.chromium.launch(headless=True)
-                context = load_cookies(browser, st.session_state.user_email)
-                if context is None:
-                    st.error("cookieファイルの読み込みに失敗しました。")
+                from playwright.sync_api import sync_playwright
+                with sync_playwright() as p:
+                    browser = p.chromium.launch(headless=True)
+                    context = load_cookies(browser, st.session_state.user_email)
+                    if context is None:
+                        st.error("cookieファイルの読み込みに失敗しました。")
+                        browser.close()
+                        return
+                    page = context.new_page()
+                    messages = get_latest_messages(page)
+                    if messages:
+                        st.session_state.messages = messages
+                        st.session_state.last_check = datetime.now()
+                    else:
+                        st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください。")
+                    context.close()
                     browser.close()
-                    playwright.stop()
-                    return
-                page = context.new_page()
-                messages = get_latest_messages(page)
-                if messages:
-                    st.session_state.messages = messages
-                    st.session_state.last_check = datetime.now()
-                else:
-                    st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください。")
-                context.close()
-                browser.close()
-                playwright.stop()
         except Exception as e:
             st.error(f"エラーが発生しました: {str(e)}")
     
