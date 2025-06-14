@@ -133,32 +133,18 @@ def get_latest_messages(page):
         
         # ログインページにリダイレクトされているかチェック
         if "login" in page.url.lower():
-            log_debug("ログインページにリダイレクトされました。ログインを実行します。")
-            # ログインページでフォームを入力
-            email_input = page.query_selector("input[name='account']")
-            password_input = page.query_selector("input[name='password']")
-            login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
-            
-            if email_input and password_input and login_btn:
-                email_input.fill(st.session_state.user_email)
-                password_input.fill(st.session_state.user_password)
-                login_btn.click()
-                page.wait_for_load_state("domcontentloaded", timeout=10000)
-                time.sleep(2)
-                
-                # ログイン成功時にクッキーを保存
-                if check_session_valid(page):
-                    save_cookies(page.context, st.session_state.user_email)
-                    log_debug("ログイン成功: クッキーを保存しました")
-                else:
-                    log_error("ログイン失敗: セッションが無効です")
-                    return []
-            else:
-                log_error("ログインフォーム要素が見つかりません")
-                return []
+            log_debug(f"[デバッグ] 現在のURL: {page.url}")
+            st.error("cookieでログインできませんでした。再度保存してください。")
+            return []
         
         # メッセージ一覧を取得
         message_elements = page.query_selector_all(".message-item, .chat-item")
+        if not message_elements:
+            st.warning("メッセージ要素が見つかりません。セレクターが変更された可能性があります。")
+            st.text("ページHTMLの先頭一部:")
+            st.code(page.content()[:2000])  # HTMLの先頭だけ表示
+            return []
+        
         messages = []
         
         for element in message_elements:
