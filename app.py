@@ -77,12 +77,35 @@ def save_cookies(context, email):
     except Exception as e:
         log_error("セッション保存エラー（storage_state）", e)
 
+def fix_storage_state_file(storage_file):
+    try:
+        with open(storage_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        changed = False
+        for c in data.get("cookies", []):
+            if c.get("sameSite") not in ("Strict", "Lax", "None"):
+                val = c.get("sameSite")
+                if val in (None, "no_restriction", "unspecified"):
+                    c["sameSite"] = "None"
+                    changed = True
+                elif val == "lax":
+                    c["sameSite"] = "Lax"
+                    changed = True
+                elif val == "strict":
+                    c["sameSite"] = "Strict"
+                    changed = True
+        if changed:
+            with open(storage_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"storage_state変換エラー: {e}")
+
 def load_cookies(browser, email):
     """保存された storage_state を読み込んで新しい context を生成"""
     try:
         storage_file = os.path.join(COOKIES_DIR, f"{email}_storage.json")
         if os.path.exists(storage_file):
-            # 新しい context を storage_state を使って作る
+            fix_storage_state_file(storage_file)
             return browser.new_context(storage_state=storage_file)
         else:
             return None
