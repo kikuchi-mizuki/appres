@@ -34,10 +34,6 @@ if not api_key:
 
 # OpenAIクライアントの設定
 openai.api_key = api_key
-client = openai.OpenAI(
-    api_key=api_key,
-    base_url=os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-)
 
 # クッキー保存用のディレクトリ
 COOKIES_DIR = "cookies"
@@ -269,7 +265,7 @@ def generate_reply(message, persona):
         """
         
         # ChatGPT APIを呼び出し
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。"},
