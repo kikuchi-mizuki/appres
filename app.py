@@ -438,11 +438,11 @@ def main():
     if st.session_state.messages:
         st.subheader("最新メッセージ")
         for i, message in enumerate(st.session_state.messages):
-            with st.expander(f"{message['sender']} - {message['time']}", key=f"message_{i}"):
+            with st.expander(f"{message['sender']} - {message['time']} ({i+1})"):
                 st.write(message['content'])
                 
                 # 返信生成ボタン
-                if st.button(f"返信を生成 ({i+1})", key=f"generate_reply_{i}"):
+                if st.button(f"返信を生成", key=f"generate_reply_{i}"):
                     with st.spinner("返信を生成中..."):
                         reply = generate_reply(message, st.session_state.persona)
                         st.text_area("生成された返信", reply, height=150, key=f"reply_text_{i}")
