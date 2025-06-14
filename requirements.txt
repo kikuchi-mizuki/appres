@@ -1,11 +1,12 @@
 streamlit==1.32.0
 playwright==1.42.0
-openai==1.12.0
+openai==0.28.0
 python-dotenv==1.0.1
 streamlit-extras==0.3.4
 httpx>=0.24.0
 flask==3.0.0
-requests
+requests==2.31.0
 streamlit-autorefresh
 tornado==6.3.3
-protobuf==4.25.3 
+protobuf==4.25.3
+pytz==2024.1 
