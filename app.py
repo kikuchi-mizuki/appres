@@ -165,7 +165,7 @@ def get_latest_messages(page):
         if not message_elements:
             st.warning("メッセージ要素が見つかりません。セレクターが変更された可能性があります。")
             st.text("ページHTMLの先頭一部:")
-            st.code(page.content()[:2000])  # HTMLの先頭だけ表示
+            st.code(page.content()[:8000])  # HTMLの先頭を8000文字表示
             return []
         
         messages = []
