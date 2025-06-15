@@ -404,7 +404,37 @@ def send_reply(email, reply_url, reply_text):
                 # 送信成功の確認（URLの変更を確認）
                 if "history" in page.url and "id=" in page.url:
                     log_debug("送信成功を確認: URLが履歴ページに遷移")
-                    return True, "返信を送信しました"
+                    # 履歴ページで自分の送信内容が直近に表示されているか確認
+                    try:
+                        page.wait_for_load_state("networkidle", timeout=5000)
+                        time.sleep(1)
+                        # メッセージリストの一番下（または上）に自分の送信内容があるか確認
+                        # 例: .message_listWrap や .mdl_listBox_simple など
+                        selectors = [
+                            ".message_listWrap .message p",
+                            ".mdl_listBox_simple .message p",
+                            "div.message p"
+                        ]
+                        found = False
+                        for selector in selectors:
+                            elements = page.query_selector_all(selector)
+                            for elem in elements[-3:]:  # 直近3件だけ見る
+                                text = elem.inner_text().strip()
+                                log_debug(f"履歴ページのメッセージ: {text}")
+                                if reply_text.strip()[:30] in text:
+                                    found = True
+                                    break
+                            if found:
+                                break
+                        if found:
+                            log_debug("履歴ページで自分の送信内容を確認")
+                            return True, "返信を送信しました"
+                        else:
+                            log_debug("履歴ページに自分の送信内容が見つかりません")
+                            return False, "送信処理は完了しましたが、履歴ページに自分の送信内容が見つかりませんでした。手動でご確認ください。"
+                    except Exception as e:
+                        log_debug(f"履歴ページ確認中にエラー: {str(e)}")
+                        return False, "送信後の履歴ページ確認中にエラーが発生しました"
                 
                 # 送信成功の確認（成功メッセージや特定の要素の出現を待機）
                 success_selectors = [
