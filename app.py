@@ -323,14 +323,63 @@ def send_reply(email, reply_url, reply_text):
                 context.close()
                 browser.close()
                 return False, "返信フォームが見つかりませんでした（debug_reply.pngを確認してください）"
+            
+            # フォームの状態を確認
+            is_disabled = textarea.get_attribute("disabled")
+            is_readonly = textarea.get_attribute("readonly")
+            log_debug(f"フォームの状態: disabled={is_disabled}, readonly={is_readonly}")
+            
+            # フォームが有効になるまで待機
+            try:
+                page.wait_for_selector("textarea[name='message']:not([disabled]):not([readonly])", timeout=5000)
+            except Exception as e:
+                log_debug(f"フォームの有効化待機中にタイムアウト: {str(e)}")
+            
+            # テキストを入力
             textarea.fill(reply_text)
+            log_debug("返信テキストを入力しました")
+            
             # 送信ボタンを探してクリック
             send_btn = page.query_selector("input[type='submit'], button[type='submit']")
             if not send_btn:
-                context.close()
-                browser.close()
-                return False, "送信ボタンが見つかりませんでした（debug_reply.pngを確認してください）"
-            send_btn.click()
+                # 代替のセレクターを試す
+                alternative_buttons = [
+                    "button:has-text('送信')",
+                    "input[value='送信']",
+                    ".submit-button",
+                    "#submit-button"
+                ]
+                for selector in alternative_buttons:
+                    send_btn = page.query_selector(selector)
+                    if send_btn:
+                        log_debug(f"送信ボタンが見つかりました: {selector}")
+                        break
+                
+                if not send_btn:
+                    context.close()
+                    browser.close()
+                    return False, "送信ボタンが見つかりませんでした（debug_reply.pngを確認してください）"
+            
+            # 送信ボタンの状態を確認
+            is_btn_disabled = send_btn.get_attribute("disabled")
+            log_debug(f"送信ボタンの状態: disabled={is_btn_disabled}")
+            
+            # 送信ボタンが有効になるまで待機
+            try:
+                page.wait_for_selector("input[type='submit']:not([disabled]), button[type='submit']:not([disabled])", timeout=5000)
+            except Exception as e:
+                log_debug(f"送信ボタンの有効化待機中にタイムアウト: {str(e)}")
+            
+            # クリックを試みる
+            try:
+                send_btn.click()
+                log_debug("送信ボタンをクリックしました")
+            except Exception as e:
+                log_debug(f"送信ボタンのクリックに失敗: {str(e)}")
+                # JavaScriptでクリックイベントを発火
+                page.evaluate("(btn) => btn.click()", send_btn)
+                log_debug("JavaScriptでクリックイベントを発火しました")
+            
             time.sleep(2)
             context.close()
             browser.close()
