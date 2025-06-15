@@ -298,6 +298,61 @@ def main():
     # メインタイトル
     st.title("YYC メッセージアシスタント")
     
+    # 柔らかいパステル調のカスタムCSSを挿入
+    st.markdown('''
+        <style>
+        body, .stApp {
+            background: #fff6fa;
+            font-family: 'Noto Sans JP', 'Rounded M+ 1c', sans-serif;
+        }
+        .stButton>button {
+            background: linear-gradient(90deg, #f9c7d1 0%, #f7e9f0 100%);
+            color: #fff;
+            border-radius: 24px;
+            font-size: 1.1em;
+            padding: 0.7em 2em;
+            box-shadow: 0 2px 8px #f9c7d155;
+            border: none;
+            margin-bottom: 0.7em;
+            transition: 0.2s;
+        }
+        .stButton>button:hover {
+            background: linear-gradient(90deg, #f7e9f0 0%, #f9c7d1 100%);
+            color: #d96c9c;
+        }
+        .stChatMessage, .stMarkdown {
+            background: #fff;
+            border-radius: 18px;
+            margin-bottom: 1em;
+            padding: 1em;
+            box-shadow: 0 2px 8px #f9c7d122;
+        }
+        .stTextInput>div>input, .stFileUploader>div {
+            border-radius: 16px;
+            background: #f7e9f0;
+        }
+        .stFileUploader>div>div>button {
+            background: #f9c7d1;
+            color: #fff;
+            border-radius: 16px;
+            font-size: 1em;
+            border: none;
+        }
+        .stTextInput>div>input {
+            font-size: 1.1em;
+            padding: 0.7em 1em;
+        }
+        .stSidebarContent {
+            background: #fff6fa;
+        }
+        hr {
+            border: none;
+            border-top: 1.5px dashed #f9c7d1;
+            margin: 1em 0;
+        }
+        </style>
+    ''', unsafe_allow_html=True)
+
     # サイドバーの設定
     with st.sidebar:
         st.header("🔐 ログイン設定")
@@ -429,7 +484,7 @@ def main():
                 except Exception as e:
                     st.error(f"エラーが発生しました: {str(e)}")
 
-    st.subheader("�� メッセージ一覧")
+    st.subheader("メッセージ一覧")
     chat_container = st.container()
     with chat_container:
         for i, message in enumerate(st.session_state.messages):
