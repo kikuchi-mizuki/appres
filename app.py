@@ -298,7 +298,7 @@ def main():
     # メインタイトル
     st.title("YYC メッセージアシスタント")
     
-    # 柔らかいパステル調のカスタムCSSを挿入
+    # 柔らかいパステル調のカスタムCSSを挿入（さらに改良）
     st.markdown('''
         <style>
         body, .stApp {
@@ -309,27 +309,41 @@ def main():
             background: linear-gradient(90deg, #f9c7d1 0%, #f7e9f0 100%);
             color: #fff;
             border-radius: 24px;
-            font-size: 1.1em;
-            padding: 0.7em 2em;
+            font-size: 1.2em;
+            padding: 1em 2em;
             box-shadow: 0 2px 8px #f9c7d155;
             border: none;
-            margin-bottom: 0.7em;
+            margin-bottom: 1em;
             transition: 0.2s;
+            min-width: 80vw;
+            max-width: 100vw;
         }
         .stButton>button:hover {
             background: linear-gradient(90deg, #f7e9f0 0%, #f9c7d1 100%);
             color: #d96c9c;
         }
-        .stChatMessage, .stMarkdown {
+        .stChatMessage.user, .user-card {
             background: #fff;
-            border-radius: 18px;
+            border-radius: 18px 18px 6px 18px;
             margin-bottom: 1em;
             padding: 1em;
             box-shadow: 0 2px 8px #f9c7d122;
+            border: 2px solid #f9c7d1;
+        }
+        .stChatMessage.assistant, .assistant-card {
+            background: #f7e9f0;
+            border-radius: 18px 18px 18px 6px;
+            margin-bottom: 1em;
+            padding: 1em;
+            box-shadow: 0 2px 8px #f7e9f055;
+            border: 2px solid #b6e2e2;
         }
         .stTextInput>div>input, .stFileUploader>div {
             border-radius: 16px;
-            background: #f7e9f0;
+            background: #fff;
+            border: 2px solid #f9c7d1;
+            font-size: 1.1em;
+            padding: 0.7em 1em;
         }
         .stFileUploader>div>div>button {
             background: #f9c7d1;
@@ -338,120 +352,57 @@ def main():
             font-size: 1em;
             border: none;
         }
-        .stTextInput>div>input {
-            font-size: 1.1em;
-            padding: 0.7em 1em;
-        }
         .stSidebarContent {
             background: #fff6fa;
+        }
+        .sidebar-section {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px #f9c7d122;
+            margin-bottom: 1.5em;
+            padding: 1.2em 1em 1em 1em;
+            border: 2px solid #f9c7d1;
+        }
+        .sidebar-section h2, .sidebar-section h3, .sidebar-section h4 {
+            margin-top: 0;
+        }
+        .scrollable-chat {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding-right: 0.5em;
+            margin-bottom: 1em;
         }
         hr {
             border: none;
             border-top: 1.5px dashed #f9c7d1;
             margin: 1em 0;
         }
+        @media (max-width: 600px) {
+            .stButton>button { font-size: 1.1em; padding: 1em 0.5em; min-width: 95vw; }
+            .sidebar-section { padding: 1em 0.5em; }
+        }
         </style>
     ''', unsafe_allow_html=True)
 
-    # サイドバーの設定
+    # サイドバーをセクションごとに区切る
     with st.sidebar:
-        st.header("🔐 ログイン設定")
-        
-        # メールアドレス入力
-        if 'user_email' not in st.session_state:
-            st.session_state.user_email = ""
-        st.session_state.user_email = st.text_input("📧 メールアドレス", value=st.session_state.user_email, key="login_email")
-        
-        # cookieファイルアップロード
-        uploaded_file = st.file_uploader("📁 cookieファイルをアップロード", type=["json"])
-        if uploaded_file is not None:
-            email = st.session_state.user_email
-            if not email:
-                st.error("先にメールアドレスを入力してください")
-            else:
-                cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
-                os.makedirs(cookies_dir, exist_ok=True)
-                file_path = os.path.join(cookies_dir, f"{email}_storage.json")
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                st.success("✅ cookieファイルを保存しました")
-                with st.spinner("cookieの有効性を確認中..."):
-                    if check_cookie_valid(email):
-                        st.success("✅ cookieは有効です")
-                    else:
-                        st.error("❌ cookieは無効です")
-        
-        st.divider()
-        
-        # YYCログインフォーム
-        st.header("🔑 YYCログイン")
-        with st.form("yyc_login_form"):
-            login_email = st.text_input("📧 YYCのメールアドレス", value=st.session_state.user_email, key="yyc_login_email_form")
-            login_password = st.text_input("🔒 YYCのパスワード", type="password", key="yyc_login_pw_form")
-            login_submit = st.form_submit_button("ログインしてcookie保存")
+        with st.container():
+            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+            st.header("🔐 ログイン設定")
+            st.text_input("メールアドレス", value=st.session_state.get('user_email', ''), key="login_email")
+            st.file_uploader("cookieファイルをアップロード", type=["json"])
+            st.markdown('</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+            st.header("👤 ペルソナ設定")
+            st.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
+            st.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
+            st.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
+            st.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests")
+            st.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
+            st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            if login_submit:
-                if not login_email or not login_password:
-                    st.error("メールアドレスとパスワードを入力してください")
-                else:
-                    try:
-                        with sync_playwright() as p:
-                            browser = p.chromium.launch(headless=True)
-                            context = browser.new_context(
-                                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                                locale="ja-JP"
-                            )
-                            page = context.new_page()
-                            page.set_extra_http_headers({
-                                "Accept-Language": "ja,en-US;q=0.9,en;q=0.8"
-                            })
-                            page.goto("https://www.yyc.co.jp/login", wait_until="domcontentloaded", timeout=60000)
-
-                            try:
-                                page.wait_for_selector("input[name='account']", timeout=10000)
-                                page.wait_for_selector("input[name='password']", timeout=10000)
-                                page.wait_for_selector("input[type='submit'][data-testid='login-btn']", timeout=10000)
-                            except Exception as e:
-                                st.write("--- デバッグ用: 取得したHTML ---")
-                                st.write(page.content())
-                                raise e
-
-                            email_input = page.query_selector("input[name='account']")
-                            password_input = page.query_selector("input[name='password']")
-                            login_btn = page.query_selector("input[type='submit'][data-testid='login-btn']")
-
-                            if email_input and password_input and login_btn:
-                                email_input.fill(login_email)
-                                password_input.fill(login_password)
-                                login_btn.click()
-                                page.wait_for_load_state("domcontentloaded", timeout=10000)
-                                time.sleep(2)
-
-                                if check_session_valid(page):
-                                    save_cookies(context, login_email)
-                                    st.session_state.user_email = login_email
-                                    st.success("✅ ログイン成功＆cookieを保存しました")
-                                else:
-                                    st.error("❌ ログイン失敗：IDかパスワードが間違っているか、画像認証が必要かもしれません")
-                            else:
-                                st.error("❌ ログインフォームの要素が見つかりませんでした")
-
-                            context.close()
-                            browser.close()
-                    except Exception as e:
-                        log_error("Playwrightログイン処理中のエラー", e)
-        
-        st.divider()
-        
-        # ペルソナ設定
-        st.header("👤 ペルソナ設定")
-        st.session_state.persona["name"] = st.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
-        st.session_state.persona["age"] = st.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
-        st.session_state.persona["occupation"] = st.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
-        st.session_state.persona["interests"] = st.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests").split(", ")
-        st.session_state.persona["personality"] = st.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
-        st.session_state.persona["writing_style"] = st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
-    
     # メインコンテンツ
     # スマホでも見やすいように1カラムに
 
@@ -485,24 +436,23 @@ def main():
                     st.error(f"エラーが発生しました: {str(e)}")
 
     st.subheader("メッセージ一覧")
-    chat_container = st.container()
-    with chat_container:
+    # スクロール可能なチャットエリア
+    with st.container():
+        st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
-            # 送信者のメッセージ（全文表示）
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(f"<div style='font-size:1.1em;line-height:1.6;word-break:break-all;'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
-
+            # 送信者のメッセージ（色分けカード）
+            st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
             # 返信生成ボタン（大きめ＆タッチしやすい）
             if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
                 with st.spinner("返信を生成中..."):
                     reply = generate_reply(message, st.session_state.persona)
-                    # 返信は「アシスタント」名で表示
-                    with st.chat_message("assistant", avatar="🤖"):
-                        st.markdown(f"<div style='font-size:1.1em;line-height:1.6;word-break:break-all;'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
+                    # 返信はアシスタント色のカードで表示
+                    st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
                     if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
                         st.success("✅ 返信文をコピーしました")
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main() 
