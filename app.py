@@ -404,6 +404,46 @@ def send_reply(email, reply_url, reply_text):
                 # 送信成功の確認（URLの変更や特定の要素の出現を待機）
                 page.wait_for_load_state("networkidle", timeout=10000)
                 log_debug("ページの読み込みが完了しました")
+                
+                # 送信成功の確認（成功メッセージや特定の要素の出現を待機）
+                success_selectors = [
+                    ".success-message",
+                    ".alert-success",
+                    "div:has-text('送信しました')",
+                    "div:has-text('送信完了')"
+                ]
+                
+                for selector in success_selectors:
+                    try:
+                        element = page.wait_for_selector(selector, timeout=5000)
+                        if element:
+                            log_debug(f"送信成功を確認: {selector}")
+                            break
+                    except Exception:
+                        continue
+                
+                # 現在のURLを確認
+                current_url = page.url
+                log_debug(f"送信後のURL: {current_url}")
+                
+                # エラーメッセージの確認
+                error_selectors = [
+                    ".error-message",
+                    ".alert-danger",
+                    "div:has-text('エラー')",
+                    "div:has-text('失敗')"
+                ]
+                
+                for selector in error_selectors:
+                    try:
+                        element = page.query_selector(selector)
+                        if element:
+                            error_text = element.inner_text()
+                            log_debug(f"エラーメッセージを検出: {error_text}")
+                            return False, f"送信に失敗しました: {error_text}"
+                    except Exception:
+                        continue
+                
             except Exception as e:
                 log_debug(f"ページ読み込み待機中にタイムアウト: {str(e)}")
             
