@@ -283,7 +283,11 @@ def send_reply(email, reply_url, reply_text):
             page.goto(reply_url, wait_until="domcontentloaded", timeout=60000)  # 60秒に延長
             time.sleep(2)
             # デバッグ用スクリーンショット
-            page.screenshot(path="debug_reply.png")
+            try:
+                page.screenshot(path="debug_reply.png")
+                log_debug("スクリーンショットを保存しました: debug_reply.png")
+            except Exception as e:
+                log_error("スクリーンショットの保存に失敗", e)
             # 返信フォームのtextareaを探す
             textarea = page.query_selector("textarea[name='message']")
             if not textarea:
