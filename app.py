@@ -292,6 +292,8 @@ def check_cookie_valid(email):
         return False
 
 def main():
+    if 'user_email' not in st.session_state:
+        st.session_state.user_email = ""
     if 'user_password' not in st.session_state:
         st.session_state.user_password = ""
     
