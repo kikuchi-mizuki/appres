@@ -300,24 +300,22 @@ def main():
     if 'user_password' not in st.session_state:
         st.session_state.user_password = ""
     
-    # 柔らかい・スマホ対応の追加CSS
+    # 柔らかい・スマホ対応の追加CSS（タイトル小さめ＆グレー、メッセージ全文表示）
     st.markdown("""
     <style>
     body, .stApp {
         font-family: 'Noto Sans JP', sans-serif;
         background-color: #fff6fa;
     }
-
-    h1, h2, .stMarkdown h1, .stMarkdown h2 {
-        color: #444 !important;
-    }
-
+    h1, .stMarkdown h1 { font-size: 1.8rem !important; color: #444 !important; }
+    h2, .stMarkdown h2 { font-size: 1.3rem !important; color: #555 !important; }
     .user-card, .assistant-card {
         white-space: pre-wrap !important;
         word-break: break-word;
         overflow-wrap: break-word;
+        overflow: visible !important;
+        max-height: none !important;
     }
-
     .stButton > button {
         width: 100% !important;
         white-space: normal !important;
@@ -331,7 +329,7 @@ def main():
     </style>
     """, unsafe_allow_html=True)
 
-    # タイトルを親しみやすく
+    # タイトルを親しみやすく小さめに
     st.title("📨 YYCで届いたメッセージに楽しく返信しよう♪")
     
     # サイドバーをセクションごとに区切る
@@ -370,10 +368,8 @@ def main():
             st.markdown('</div>', unsafe_allow_html=True)
 
     # メインコンテンツ
-    # スマホでも見やすいように1カラムに
-
-    # 最新メッセージ取得ボタン（必ず表示）
     if st.button("📥 最新メッセージを取得", key="fetch_messages", use_container_width=True):
+        # メッセージ取得＆自動返信生成
         if not st.session_state.user_email:
             st.error("メールアドレスを入力してください")
         else:
@@ -382,7 +378,7 @@ def main():
                 st.error("cookieファイルがありません。手動でcookieを保存してください")
             else:
                 try:
-                    with st.spinner("メッセージを取得中..."):
+                    with st.spinner("メッセージと返信を取得中..."):
                         with sync_playwright() as p:
                             browser = p.chromium.launch(headless=True)
                             context = load_cookies(browser, st.session_state.user_email)
@@ -392,10 +388,12 @@ def main():
                             else:
                                 page = context.new_page()
                                 messages = get_latest_messages(page)
-                                if messages:
-                                    st.session_state.messages = messages
-                                else:
-                                    st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください")
+                                st.session_state.messages = messages if messages else []
+                                # 返信候補を自動生成
+                                st.session_state.replies = []
+                                for msg in st.session_state.messages:
+                                    reply = generate_reply(msg, st.session_state.persona)
+                                    st.session_state.replies.append(reply)
                                 context.close()
                                 browser.close()
                 except Exception as e:
@@ -408,14 +406,17 @@ def main():
         for i, message in enumerate(st.session_state.messages):
             # 送信者のメッセージ（色分けカード）
             st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
-            # 返信生成ボタン（大きめ＆タッチしやすい）
-            if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
-                with st.spinner("返信を生成中..."):
-                    reply = generate_reply(message, st.session_state.persona)
-                    # 返信はアシスタント色のカードで表示
-                    st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
-                    if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
+            # 返信候補（自動生成済み）
+            if 'replies' in st.session_state and i < len(st.session_state.replies):
+                reply = st.session_state.replies[i]
+                st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("📋 コピー", key=f"copy_reply_{i}", use_container_width=True):
                         st.success("✅ 返信文をコピーしました")
+                with col2:
+                    if st.button("📨 返信", key=f"send_reply_{i}", use_container_width=True):
+                        st.info("（仮）返信処理をここに実装予定です")
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
