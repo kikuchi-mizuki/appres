@@ -284,10 +284,14 @@ def send_reply(email, reply_url, reply_text):
             time.sleep(2)
             # デバッグ用スクリーンショット
             try:
-                page.screenshot(path="debug_reply.png")
-                log_debug("スクリーンショットを保存しました: debug_reply.png")
+                # スクリーンショット保存用のディレクトリを作成
+                screenshot_dir = os.path.join(os.getcwd(), "screenshots")
+                os.makedirs(screenshot_dir, exist_ok=True)
+                screenshot_path = os.path.join(screenshot_dir, "debug_reply.png")
+                page.screenshot(path=screenshot_path)
+                log_debug(f"スクリーンショットを保存しました: {screenshot_path}")
             except Exception as e:
-                log_error("スクリーンショットの保存に失敗", e)
+                log_error(f"スクリーンショットの保存に失敗: {str(e)}", e)
             # 返信フォームのtextareaを探す
             textarea = page.query_selector("textarea[name='message']")
             if not textarea:
