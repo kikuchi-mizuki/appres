@@ -79,35 +79,26 @@ def save_cookies(context, email):
     except Exception as e:
         log_error("セッション保存エラー（storage_state）", e)
 
-def fix_storage_state_file(storage_file):
-    try:
-        with open(storage_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        changed = False
-        for c in data.get("cookies", []):
-            if c.get("sameSite") not in ("Strict", "Lax", "None"):
-                val = c.get("sameSite")
-                if val in (None, "no_restriction", "unspecified"):
-                    c["sameSite"] = "None"
-                    changed = True
-                elif val == "lax":
-                    c["sameSite"] = "Lax"
-                    changed = True
-                elif val == "strict":
-                    c["sameSite"] = "Strict"
-                    changed = True
-        if changed:
-            with open(storage_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"storage_state変換エラー: {e}")
+def fix_storage_state_format(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    changed = False
+    for cookie in data.get("cookies", []):
+        same_site = cookie.get("sameSite")
+        if same_site not in ["Strict", "Lax", "None"]:
+            cookie["sameSite"] = "None"
+            changed = True
+    if changed:
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    return filepath
 
 def load_cookies(browser, email):
     """保存された storage_state を読み込んで新しい context を生成"""
     try:
         storage_file = os.path.join(COOKIES_DIR, f"{email}_storage.json")
         if os.path.exists(storage_file):
-            fix_storage_state_file(storage_file)
+            fix_storage_state_format(storage_file)
             return browser.new_context(storage_state=storage_file)
         else:
             return None
@@ -445,38 +436,26 @@ def main():
         # メッセージ一覧の表示
         if st.session_state.messages:
             st.subheader("💬 メッセージ一覧")
-            
-            # チャットコンテナを作成
             chat_container = st.container()
-            
             with chat_container:
                 for i, message in enumerate(st.session_state.messages):
-                    # 送信者のメッセージ
+                    # 送信者のメッセージ（全文表示）
                     with st.chat_message("user", avatar="👤"):
                         st.write(f"**{message['sender']}** ({message['time']})")
-                        st.write(message['content'])
-                    
+                        st.write(message['content'])  # 省略せず全文表示
+
                     # 返信生成ボタン
                     if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
                         with st.spinner("返信を生成中..."):
                             reply = generate_reply(message, st.session_state.persona)
-                            
-                            # 生成された返信をチャットメッセージとして表示
+                            # 返信は「アシスタント」名で表示
                             with st.chat_message("assistant", avatar="🤖"):
+                                st.write(f"**アシスタント**")
                                 st.write(reply)
-                            
-                            # コピーボタン
                             if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
                                 st.success("✅ 返信文をコピーしました")
-                    
-                    # メッセージ間に区切り線を追加
                     if i < len(st.session_state.messages) - 1:
                         st.divider()
-    
-    with col2:
-        # 最終更新時刻の表示
-        if st.session_state.last_check:
-            st.info(f"🕒 最終更新: {st.session_state.last_check.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     main() 
