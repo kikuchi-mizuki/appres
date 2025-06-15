@@ -401,9 +401,10 @@ def send_reply(email, reply_url, reply_text):
             
             # 送信後の状態を確認
             try:
-                # 送信成功の確認（URLの変更や特定の要素の出現を待機）
-                page.wait_for_load_state("networkidle", timeout=10000)
-                log_debug("ページの読み込みが完了しました")
+                # 送信成功の確認（URLの変更を確認）
+                if "history" in page.url and "id=" in page.url:
+                    log_debug("送信成功を確認: URLが履歴ページに遷移")
+                    return True, "返信を送信しました"
                 
                 # 送信成功の確認（成功メッセージや特定の要素の出現を待機）
                 success_selectors = [
@@ -439,10 +440,19 @@ def send_reply(email, reply_url, reply_text):
                         element = page.query_selector(selector)
                         if element:
                             error_text = element.inner_text()
-                            log_debug(f"エラーメッセージを検出: {error_text}")
-                            return False, f"送信に失敗しました: {error_text}"
+                            # エラーメッセージの内容を検証
+                            if any(keyword in error_text.lower() for keyword in ['エラー', '失敗', 'error', 'failed']):
+                                log_debug(f"エラーメッセージを検出: {error_text}")
+                                return False, f"送信に失敗しました: {error_text}"
+                            else:
+                                log_debug(f"誤検出を除外: {error_text}")
                     except Exception:
                         continue
+                
+                # 送信成功の確認（URLの変更を確認）
+                if "history" in current_url and "id=" in current_url:
+                    log_debug("送信成功を確認: URLが履歴ページに遷移")
+                    return True, "返信を送信しました"
                 
             except Exception as e:
                 log_debug(f"ページ読み込み待機中にタイムアウト: {str(e)}")
