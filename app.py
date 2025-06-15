@@ -391,7 +391,7 @@ def main():
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
             st.header("🔐 ログイン設定")
-            st.text_input("メールアドレス", value=st.session_state.user_email, key="login_email")
+            st.session_state.user_email = st.text_input("メールアドレス", value=st.session_state.user_email)
             uploaded_file = st.file_uploader("cookieファイルをアップロード", type=["json"])
             if uploaded_file is not None:
                 email = st.session_state.user_email
