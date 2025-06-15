@@ -398,64 +398,26 @@ def main():
         st.session_state.persona["writing_style"] = st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
     
     # メインコンテンツ
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        # メッセージ取得ボタン
-        if st.button("📥 最新メッセージを取得", key="fetch_messages", use_container_width=True):
-            if not st.session_state.user_email:
-                st.error("メールアドレスを入力してください")
-                return
-            
-            storage_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}_storage.json")
-            if not os.path.exists(storage_file):
-                st.error("cookieファイルがありません。手動でcookieを保存してください")
-                return
-            
-            try:
-                with st.spinner("メッセージを取得中..."):
-                    with sync_playwright() as p:
-                        browser = p.chromium.launch(headless=True)
-                        context = load_cookies(browser, st.session_state.user_email)
-                        if context is None:
-                            st.error("cookieファイルの読み込みに失敗しました")
-                            browser.close()
-                            return
-                        page = context.new_page()
-                        messages = get_latest_messages(page)
-                        if messages:
-                            st.session_state.messages = messages
-                            st.session_state.last_check = datetime.now()
-                        else:
-                            st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください")
-                        context.close()
-                        browser.close()
-            except Exception as e:
-                st.error(f"エラーが発生しました: {str(e)}")
-        
-        # メッセージ一覧の表示
-        if st.session_state.messages:
-            st.subheader("💬 メッセージ一覧")
-            chat_container = st.container()
-            with chat_container:
-                for i, message in enumerate(st.session_state.messages):
-                    # 送信者のメッセージ（全文表示）
-                    with st.chat_message("user", avatar="👤"):
-                        st.write(f"**{message['sender']}** ({message['time']})")
-                        st.write(message['content'])  # 省略せず全文表示
+    # スマホでも見やすいように1カラムに
+    st.subheader("💬 メッセージ一覧")
+    chat_container = st.container()
+    with chat_container:
+        for i, message in enumerate(st.session_state.messages):
+            # 送信者のメッセージ（全文表示）
+            with st.chat_message("user", avatar="👤"):
+                st.markdown(f"<div style='font-size:1.1em;line-height:1.6;word-break:break-all;'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
 
-                    # 返信生成ボタン
-                    if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
-                        with st.spinner("返信を生成中..."):
-                            reply = generate_reply(message, st.session_state.persona)
-                            # 返信は「アシスタント」名で表示
-                            with st.chat_message("assistant", avatar="🤖"):
-                                st.write(f"**アシスタント**")
-                                st.write(reply)
-                            if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
-                                st.success("✅ 返信文をコピーしました")
-                    if i < len(st.session_state.messages) - 1:
-                        st.divider()
+            # 返信生成ボタン（大きめ＆タッチしやすい）
+            if st.button("✍️ 返信を生成", key=f"generate_reply_{i}", use_container_width=True):
+                with st.spinner("返信を生成中..."):
+                    reply = generate_reply(message, st.session_state.persona)
+                    # 返信は「アシスタント」名で表示
+                    with st.chat_message("assistant", avatar="🤖"):
+                        st.markdown(f"<div style='font-size:1.1em;line-height:1.6;word-break:break-all;'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
+                    if st.button("📋 クリップボードにコピー", key=f"copy_reply_{i}", use_container_width=True):
+                        st.success("✅ 返信文をコピーしました")
+            if i < len(st.session_state.messages) - 1:
+                st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main() 
