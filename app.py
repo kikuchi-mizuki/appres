@@ -391,8 +391,24 @@ def main():
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
             st.header("🔐 ログイン設定")
-            st.text_input("メールアドレス", value=st.session_state.get('user_email', ''), key="login_email")
-            st.file_uploader("cookieファイルをアップロード", type=["json"])
+            st.text_input("メールアドレス", value=st.session_state.user_email, key="login_email")
+            uploaded_file = st.file_uploader("cookieファイルをアップロード", type=["json"])
+            if uploaded_file is not None:
+                email = st.session_state.user_email
+                if not email:
+                    st.warning("先にメールアドレスを入力してください")
+                else:
+                    cookies_dir = COOKIES_DIR if 'COOKIES_DIR' in globals() else "cookies"
+                    os.makedirs(cookies_dir, exist_ok=True)
+                    file_path = os.path.join(cookies_dir, f"{email}_storage.json")
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.read())
+                    st.success("✅ cookieファイルを保存しました")
+                    # バリデーション
+                    if check_cookie_valid(email):
+                        st.success("✅ cookieは有効です")
+                    else:
+                        st.error("❌ cookieは無効です")
             st.markdown('</div>', unsafe_allow_html=True)
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
