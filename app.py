@@ -300,99 +300,40 @@ def main():
     if 'user_password' not in st.session_state:
         st.session_state.user_password = ""
     
-    # メインタイトル
-    st.title("YYC メッセージアシスタント")
-    
-    # 柔らかいパステル調のカスタムCSSを挿入（さらに改良）
-    st.markdown('''
-        <style>
-        body, .stApp {
-            background: #fff6fa;
-            font-family: 'Noto Sans JP', 'Rounded M+ 1c', sans-serif;
-        }
-        .stButton>button {
-            background: linear-gradient(90deg, #f9c7d1 0%, #f7e9f0 100%);
-            color: #fff;
-            border-radius: 24px;
-            font-size: 1.2em;
-            padding: 1em 2em;
-            box-shadow: 0 2px 8px #f9c7d155;
-            border: none;
-            margin-bottom: 1em;
-            transition: 0.2s;
-            min-width: 80vw;
-            max-width: 100vw;
-        }
-        .stButton>button:hover {
-            background: linear-gradient(90deg, #f7e9f0 0%, #f9c7d1 100%);
-            color: #d96c9c;
-        }
-        .stChatMessage.user, .user-card {
-            background: #fff;
-            border-radius: 18px 18px 6px 18px;
-            margin-bottom: 1em;
-            padding: 1em;
-            box-shadow: 0 2px 8px #f9c7d122;
-            border: 2px solid #f9c7d1;
-        }
-        .stChatMessage.assistant, .assistant-card {
-            background: #f7e9f0;
-            border-radius: 18px 18px 18px 6px;
-            margin-bottom: 1em;
-            padding: 1em;
-            box-shadow: 0 2px 8px #f7e9f055;
-            border: 2px solid #b6e2e2;
-        }
-        .stTextInput>div>input, .stFileUploader>div {
-            border-radius: 16px;
-            background: #fff;
-            border: 2px solid #f9c7d1;
-            font-size: 1.1em;
-            padding: 0.7em 1em;
-        }
-        .stFileUploader>div>div>button {
-            background: #f9c7d1;
-            color: #fff;
-            border-radius: 16px;
-            font-size: 1em;
-            border: none;
-        }
-        .stSidebarContent {
-            background: #fff6fa;
-        }
-        .sidebar-section {
-            background: #fff;
-            border-radius: 18px;
-            box-shadow: 0 2px 8px #f9c7d122;
-            margin-bottom: 1.5em;
-            padding: 1.2em 1em 1em 1em;
-            border: 2px solid #f9c7d1;
-        }
-        .sidebar-section h2, .sidebar-section h3, .sidebar-section h4 {
-            margin-top: 0;
-        }
-        .scrollable-chat {
-            max-height: 60vh;
-            overflow-y: auto;
-            padding-right: 0.5em;
-            margin-bottom: 1em;
-        }
-        hr {
-            border: none;
-            border-top: 1.5px dashed #f9c7d1;
-            margin: 1em 0;
-        }
-        @media (max-width: 600px) {
-            .stButton>button { font-size: 1.1em; padding: 1em 0.5em; min-width: 95vw; }
-            .sidebar-section { padding: 1em 0.5em; }
-        }
-        div:has(> .streamlit-expanderHeader:contains('DEBUG')) { display: none; }
-        .css-1v0mbdj { display: none; }
-        .stMarkdown { font-size: 1.1em; line-height: 1.6em; }
-        .stButton>button { font-size: 1.1em; }
-        </style>
-    ''', unsafe_allow_html=True)
+    # 柔らかい・スマホ対応の追加CSS
+    st.markdown("""
+    <style>
+    body, .stApp {
+        font-family: 'Noto Sans JP', sans-serif;
+        background-color: #fff6fa;
+    }
 
+    h1, h2, .stMarkdown h1, .stMarkdown h2 {
+        color: #444 !important;
+    }
+
+    .user-card, .assistant-card {
+        white-space: pre-wrap !important;
+        word-break: break-word;
+        overflow-wrap: break-word;
+    }
+
+    .stButton > button {
+        width: 100% !important;
+        white-space: normal !important;
+        font-size: 1.1em;
+        padding: 0.9em;
+        border-radius: 20px;
+        background: linear-gradient(90deg, #f9c7d1 0%, #f7e9f0 100%);
+        border: none;
+        box-shadow: 0 2px 8px rgba(249, 199, 209, 0.3);
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # タイトルを親しみやすく
+    st.title("📨 YYCで届いたメッセージに楽しく返信しよう♪")
+    
     # サイドバーをセクションごとに区切る
     with st.sidebar:
         with st.container():
