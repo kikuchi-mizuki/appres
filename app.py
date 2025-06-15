@@ -290,6 +290,31 @@ def send_reply(email, reply_url, reply_text):
                 screenshot_path = os.path.join(screenshot_dir, "debug_reply.png")
                 page.screenshot(path=screenshot_path)
                 log_debug(f"スクリーンショットを保存しました: {screenshot_path}")
+                
+                # ページのHTMLを取得してログに出力
+                html_content = page.content()
+                log_debug("ページのHTML構造:")
+                log_debug(html_content[:1000])  # 最初の1000文字だけ出力
+                
+                # 返信フォームの要素を確認
+                textarea = page.query_selector("textarea[name='message']")
+                if textarea:
+                    log_debug("返信フォームが見つかりました")
+                    log_debug(f"返信フォームの属性: {textarea.get_attribute('name')}")
+                else:
+                    log_debug("返信フォームが見つかりません")
+                    # 代替のセレクターを試す
+                    alternative_selectors = [
+                        "textarea",
+                        "input[type='text']",
+                        ".message-form textarea",
+                        "#message-form textarea"
+                    ]
+                    for selector in alternative_selectors:
+                        element = page.query_selector(selector)
+                        if element:
+                            log_debug(f"代替セレクター '{selector}' で要素が見つかりました")
+                
             except Exception as e:
                 log_error(f"スクリーンショットの保存に失敗: {str(e)}", e)
             # 返信フォームのtextareaを探す
