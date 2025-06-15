@@ -372,13 +372,40 @@ def send_reply(email, reply_url, reply_text):
             
             # クリックを試みる
             try:
-                send_btn.click()
+                # クリック前に少し待機
+                time.sleep(1)
+                # 通常のクリックを試みる
+                send_btn.click(timeout=5000)
                 log_debug("送信ボタンをクリックしました")
             except Exception as e:
-                log_debug(f"送信ボタンのクリックに失敗: {str(e)}")
-                # JavaScriptでクリックイベントを発火
-                page.evaluate("(btn) => btn.click()", send_btn)
-                log_debug("JavaScriptでクリックイベントを発火しました")
+                log_debug(f"通常のクリックに失敗: {str(e)}")
+                try:
+                    # JavaScriptでクリックイベントを発火
+                    page.evaluate("(btn) => btn.click()", send_btn)
+                    log_debug("JavaScriptでクリックイベントを発火しました")
+                except Exception as js_error:
+                    log_debug(f"JavaScriptクリックに失敗: {str(js_error)}")
+                    try:
+                        # フォームのsubmit()を直接呼び出す
+                        page.evaluate("""
+                            (form) => {
+                                if (form && typeof form.submit === 'function') {
+                                    form.submit();
+                                }
+                            }
+                        """, send_btn.evaluate("btn => btn.form"))
+                        log_debug("フォームのsubmit()を直接呼び出しました")
+                    except Exception as submit_error:
+                        log_debug(f"フォームsubmitに失敗: {str(submit_error)}")
+                        return False, "送信ボタンのクリックに失敗しました"
+            
+            # 送信後の状態を確認
+            try:
+                # 送信成功の確認（URLの変更や特定の要素の出現を待機）
+                page.wait_for_load_state("networkidle", timeout=10000)
+                log_debug("ページの読み込みが完了しました")
+            except Exception as e:
+                log_debug(f"ページ読み込み待機中にタイムアウト: {str(e)}")
             
             time.sleep(2)
             context.close()
