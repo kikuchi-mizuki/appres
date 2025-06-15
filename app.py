@@ -399,7 +399,37 @@ def main():
     
     # メインコンテンツ
     # スマホでも見やすいように1カラムに
-    st.subheader("💬 メッセージ一覧")
+
+    # 最新メッセージ取得ボタン（必ず表示）
+    if st.button("📥 最新メッセージを取得", key="fetch_messages", use_container_width=True):
+        if not st.session_state.user_email:
+            st.error("メールアドレスを入力してください")
+        else:
+            storage_file = os.path.join(COOKIES_DIR, f"{st.session_state.user_email}_storage.json")
+            if not os.path.exists(storage_file):
+                st.error("cookieファイルがありません。手動でcookieを保存してください")
+            else:
+                try:
+                    with st.spinner("メッセージを取得中..."):
+                        with sync_playwright() as p:
+                            browser = p.chromium.launch(headless=True)
+                            context = load_cookies(browser, st.session_state.user_email)
+                            if context is None:
+                                st.error("cookieファイルの読み込みに失敗しました")
+                                browser.close()
+                            else:
+                                page = context.new_page()
+                                messages = get_latest_messages(page)
+                                if messages:
+                                    st.session_state.messages = messages
+                                else:
+                                    st.warning("メッセージが見つからないか、cookieが無効です。再度cookieを保存してください")
+                                context.close()
+                                browser.close()
+                except Exception as e:
+                    st.error(f"エラーが発生しました: {str(e)}")
+
+    st.subheader("�� メッセージ一覧")
     chat_container = st.container()
     with chat_container:
         for i, message in enumerate(st.session_state.messages):
