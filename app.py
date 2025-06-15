@@ -269,7 +269,7 @@ def check_cookie_valid(email):
         return False
 
 def send_reply(email, reply_url, reply_text):
-    """Playwrightで指定メッセージに自動返信"""
+    """Playwrightで指定メッセージに自動返信（タイムアウト延長＆デバッグ用スクリーンショット）"""
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -280,21 +280,23 @@ def send_reply(email, reply_url, reply_text):
             # YYCは相対パスなのでフルURLに
             if reply_url.startswith("/"):
                 reply_url = f"https://www.yyc.co.jp{reply_url}"
-            page.goto(reply_url, wait_until="domcontentloaded", timeout=30000)
+            page.goto(reply_url, wait_until="domcontentloaded", timeout=60000)  # 60秒に延長
             time.sleep(2)
+            # デバッグ用スクリーンショット
+            page.screenshot(path="debug_reply.png")
             # 返信フォームのtextareaを探す
             textarea = page.query_selector("textarea[name='message']")
             if not textarea:
                 context.close()
                 browser.close()
-                return False, "返信フォームが見つかりませんでした"
+                return False, "返信フォームが見つかりませんでした（debug_reply.pngを確認してください）"
             textarea.fill(reply_text)
             # 送信ボタンを探してクリック
             send_btn = page.query_selector("input[type='submit'], button[type='submit']")
             if not send_btn:
                 context.close()
                 browser.close()
-                return False, "送信ボタンが見つかりませんでした"
+                return False, "送信ボタンが見つかりませんでした（debug_reply.pngを確認してください）"
             send_btn.click()
             time.sleep(2)
             context.close()
