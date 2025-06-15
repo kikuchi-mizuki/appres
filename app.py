@@ -54,20 +54,23 @@ if 'persona' not in st.session_state:
         "writing_style": "カジュアルで親しみやすい"
     }
 
+# サイドバーにデバッグ表示切り替え（開発者用）
+with st.sidebar:
+    show_debug = st.checkbox("🔧 開発者用: デバッグ表示", value=False)
+    st.session_state["show_debug"] = show_debug
+
 def log_debug(message):
-    """デバッグメッセージをログとStreamlitに出力"""
     logger.debug(message)
-    st.write(f"DEBUG: {message}")
-    print(f"DEBUG: {message}")
+    if st.session_state.get("show_debug"):
+        st.text(f"DEBUG: {message}")
 
 def log_error(message, error=None):
-    """エラーメッセージをログとStreamlitに出力"""
     logger.error(message)
-    st.error(f"ERROR: {message}")
-    print(f"ERROR: {message}")
+    if st.session_state.get("show_debug"):
+        st.text(f"ERROR: {message}")
+        if error:
+            st.text(f"Error details:\n{traceback.format_exc()}")
     if error:
-        logger.error(traceback.format_exc())
-        st.error(f"Error details:\n{traceback.format_exc()}")
         print(f"Error details:\n{traceback.format_exc()}")
 
 def save_cookies(context, email):
@@ -383,6 +386,10 @@ def main():
             .stButton>button { font-size: 1.1em; padding: 1em 0.5em; min-width: 95vw; }
             .sidebar-section { padding: 1em 0.5em; }
         }
+        div:has(> .streamlit-expanderHeader:contains('DEBUG')) { display: none; }
+        .css-1v0mbdj { display: none; }
+        .stMarkdown { font-size: 1.1em; line-height: 1.6em; }
+        .stButton>button { font-size: 1.1em; }
         </style>
     ''', unsafe_allow_html=True)
 
