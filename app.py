@@ -354,11 +354,25 @@ def send_reply(email, reply_url, reply_text):
                     if send_btn:
                         log_debug(f"送信ボタンが見つかりました: {selector}")
                         break
-                
                 if not send_btn:
                     context.close()
                     browser.close()
                     return False, "送信ボタンが見つかりませんでした（debug_reply.pngを確認してください）"
+            
+            # --- 送信時のリクエスト内容をキャプチャ ---
+            request_log = []
+            def log_request(request):
+                if request.method == "POST":
+                    try:
+                        log_debug(f"POSTリクエスト: {request.url}")
+                        log_debug(f"POSTデータ: {request.post_data}")
+                        request_log.append({
+                            "url": request.url,
+                            "post_data": request.post_data
+                        })
+                    except Exception as e:
+                        log_debug(f"POSTリクエストのログ取得に失敗: {str(e)}")
+            page.on("request", log_request)
             
             # 送信ボタンの状態を確認
             is_btn_disabled = send_btn.get_attribute("disabled")
@@ -408,29 +422,42 @@ def send_reply(email, reply_url, reply_text):
                     try:
                         page.wait_for_load_state("networkidle", timeout=5000)
                         time.sleep(1)
-                        # メッセージリストの一番下（または上）に自分の送信内容があるか確認
-                        # 例: .message_listWrap や .mdl_listBox_simple など
-                        selectors = [
-                            ".message_listWrap .message p",
-                            ".mdl_listBox_simple .message p",
-                            "div.message p"
-                        ]
+                        # --- 追加: 履歴ページを2回リロードし、一定時間待ってから再度チェック ---
                         found = False
-                        for selector in selectors:
-                            elements = page.query_selector_all(selector)
-                            for elem in elements[-3:]:  # 直近3件だけ見る
-                                text = elem.inner_text().strip()
-                                log_debug(f"履歴ページのメッセージ: {text}")
-                                if reply_text.strip()[:30] in text:
-                                    found = True
+                        for reload_count in range(3):
+                            if reload_count > 0:
+                                log_debug(f"履歴ページをリロード: {reload_count}回目")
+                                page.reload(wait_until="networkidle")
+                                time.sleep(2)
+                            # メッセージリストの一番下（または上）に自分の送信内容があるか確認
+                            selectors = [
+                                ".message_listWrap .message p",
+                                ".mdl_listBox_simple .message p",
+                                "div.message p"
+                            ]
+                            for selector in selectors:
+                                elements = page.query_selector_all(selector)
+                                for elem in elements[-3:]:  # 直近3件だけ見る
+                                    text = elem.inner_text().strip()
+                                    log_debug(f"履歴ページのメッセージ: {text}")
+                                    if reply_text.strip()[:30] in text:
+                                        found = True
+                                        break
+                                if found:
                                     break
                             if found:
                                 break
                         if found:
                             log_debug("履歴ページで自分の送信内容を確認")
+                            # --- 送信時のPOSTリクエストログも出力 ---
+                            if request_log:
+                                log_debug(f"送信時のPOSTリクエスト一覧: {request_log}")
                             return True, "返信を送信しました"
                         else:
                             log_debug("履歴ページに自分の送信内容が見つかりません")
+                            # --- 送信時のPOSTリクエストログも出力 ---
+                            if request_log:
+                                log_debug(f"送信時のPOSTリクエスト一覧: {request_log}")
                             return False, "送信処理は完了しましたが、履歴ページに自分の送信内容が見つかりませんでした。手動でご確認ください。"
                     except Exception as e:
                         log_debug(f"履歴ページ確認中にエラー: {str(e)}")
