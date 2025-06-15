@@ -139,91 +139,65 @@ def check_session_valid(page):
         return False
 
 def get_latest_messages(page):
-    """最新のメッセージを取得"""
+    """最新のメッセージを取得（返信URLも含める）"""
     try:
-        # メッセージページに移動
         log_debug("メッセージページに移動します...")
         page.goto("https://www.yyc.co.jp/my/mail_box/round_trip?filter=not_res", wait_until="domcontentloaded", timeout=60000)
         time.sleep(2)
         log_debug(f"現在のURL: {page.url}")
-        
-        # ログインページにリダイレクトされているかチェック
         if "login" in page.url.lower():
             log_debug(f"ログインページにリダイレクトされました: {page.url}")
             st.error("cookieでログインできませんでした。再度保存してください。")
             return []
-        
-        # メッセージ一覧を取得
         log_debug("メッセージ要素を検索中...")
-        
-        # まず親要素の存在を確認
         message_list_wrap = page.query_selector(".message_listWrap")
         if message_list_wrap:
             log_debug("message_listWrap要素が見つかりました")
-            # 子要素の数を確認
             children = message_list_wrap.query_selector_all("*")
             log_debug(f"message_listWrapの子要素数: {len(children)}")
         else:
             log_debug("message_listWrap要素が見つかりません")
-        
-        # メッセージ要素を検索（複数のセレクターを試す）
         message_elements = page.query_selector_all(".mdl_listBox_simple, .message_listWrap > div")
         log_debug(f"見つかったメッセージ要素の数: {len(message_elements)}")
-        
         if not message_elements:
             log_debug("メッセージ要素が見つかりません。HTMLの構造を確認します...")
             st.warning("メッセージ要素が見つかりません。セレクターが変更された可能性があります。")
-            
-            # デバッグ用にHTMLの構造を出力
-            log_debug("ページのHTML構造:")
-            html_content = page.content()
-            st.text("ページHTMLの先頭一部:")
-            st.code(html_content[:8000])
-            
             return []
-        
         messages = []
         log_debug(f"メッセージ要素の解析を開始します（{len(message_elements)}件）")
-        
         for i, element in enumerate(message_elements, 1):
             try:
                 log_debug(f"メッセージ {i} の解析を開始")
-                
-                # 送信者名
                 sender = element.query_selector(".name strong, .thumb + div strong")
                 sender_name = sender.inner_text() if sender else "不明"
                 log_debug(f"送信者: {sender_name}")
-                
-                # メッセージ本文
                 content = element.query_selector(".message p, .thumb + div p")
                 message_text = content.inner_text() if content else ""
                 log_debug(f"メッセージ本文: {message_text[:50]}...")
-                
-                # 送信日時
                 time_elem = element.query_selector(".date, .thumb + div .date")
                 sent_time = time_elem.inner_text() if time_elem else ""
                 log_debug(f"送信日時: {sent_time}")
-                
-                # 未返信ステータス
                 status = element.query_selector(".msgHistoryStatus.replied")
                 is_unreplied = bool(status)
                 log_debug(f"未返信ステータス: {is_unreplied}")
-                
+                # 返信URLの取得
+                reply_a = element.query_selector("a[href^='/my/mail_box/history/?id=']")
+                reply_url = reply_a.get_attribute("href") if reply_a else None
+                log_debug(f"返信URL: {reply_url}")
                 if message_text:
                     messages.append({
                         "sender": sender_name,
                         "content": message_text,
                         "time": sent_time,
-                        "is_unreplied": is_unreplied
+                        "is_unreplied": is_unreplied,
+                        "reply_url": reply_url
                     })
                     log_debug(f"メッセージ {i} の解析が完了")
                 else:
                     log_debug(f"メッセージ {i} は本文が空のためスキップ")
-                    
             except Exception as e:
                 log_error(f"メッセージ {i} の解析中にエラーが発生: {str(e)}")
                 continue
-        
         log_debug(f"合計 {len(messages)} 件のメッセージを取得しました")
         return messages
     except Exception as e:
@@ -293,6 +267,41 @@ def check_cookie_valid(email):
         return False
     except Exception as e:
         return False
+
+def send_reply(email, reply_url, reply_text):
+    """Playwrightで指定メッセージに自動返信"""
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = load_cookies(browser, email)
+            if context is None:
+                return False, "cookieファイルの読み込みに失敗しました"
+            page = context.new_page()
+            # YYCは相対パスなのでフルURLに
+            if reply_url.startswith("/"):
+                reply_url = f"https://www.yyc.co.jp{reply_url}"
+            page.goto(reply_url, wait_until="domcontentloaded", timeout=30000)
+            time.sleep(2)
+            # 返信フォームのtextareaを探す
+            textarea = page.query_selector("textarea[name='message']")
+            if not textarea:
+                context.close()
+                browser.close()
+                return False, "返信フォームが見つかりませんでした"
+            textarea.fill(reply_text)
+            # 送信ボタンを探してクリック
+            send_btn = page.query_selector("input[type='submit'], button[type='submit']")
+            if not send_btn:
+                context.close()
+                browser.close()
+                return False, "送信ボタンが見つかりませんでした"
+            send_btn.click()
+            time.sleep(2)
+            context.close()
+            browser.close()
+            return True, "返信を送信しました"
+    except Exception as e:
+        return False, f"返信送信エラー: {str(e)}"
 
 def main():
     if 'user_email' not in st.session_state:
@@ -416,7 +425,12 @@ def main():
                         st.success("✅ 返信文をコピーしました")
                 with col2:
                     if st.button("📨 返信", key=f"send_reply_{i}", use_container_width=True):
-                        st.info("（仮）返信処理をここに実装予定です")
+                        with st.spinner("返信を送信中..."):
+                            success, msg = send_reply(st.session_state.user_email, message.get("reply_url"), reply)
+                            if success:
+                                st.success("✅ 返信を送信しました")
+                            else:
+                                st.error(f"❌ {msg}")
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
