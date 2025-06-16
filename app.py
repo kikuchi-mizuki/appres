@@ -396,8 +396,32 @@ def send_reply(email, reply_url, reply_text):
                 # クリック前に少し待機
                 time.sleep(1)
                 if send_btn and is_visible and is_enabled:
-                    send_btn.click(timeout=10000)
-                    log_debug("送信ボタンをクリックしました")
+                    send_btn.scroll_into_view_if_needed()
+                    try:
+                        send_btn.click(timeout=10000)
+                        log_debug("送信ボタンをクリックしました")
+                    except Exception as e:
+                        log_debug(f"通常のクリックに失敗: {str(e)}")
+                        # outerHTMLをログ出力
+                        try:
+                            send_btn_html = send_btn.evaluate('el => el.outerHTML')
+                            log_debug(f"送信ボタンouterHTML: {send_btn_html}")
+                        except Exception as html_e:
+                            log_debug(f"送信ボタンouterHTML取得失敗: {str(html_e)}")
+                        # JavaScriptでクリックイベントを発火
+                        try:
+                            page.evaluate("(btn) => btn.click()", send_btn)
+                            log_debug("JavaScriptでクリックイベントを発火しました")
+                        except Exception as js_error:
+                            log_debug(f"JavaScriptクリックに失敗: {str(js_error)}")
+                            # デバッグ用にスクリーンショットとHTMLを保存
+                            error_screenshot_path = os.path.join(screenshot_dir, "send_btn_error.png")
+                            page.screenshot(path=error_screenshot_path)
+                            log_debug(f"送信ボタンエラー時のスクリーンショットを保存: {error_screenshot_path}")
+                            log_debug(page.content()[:1000])
+                            context.close()
+                            browser.close()
+                            return False, "送信ボタンがクリックできませんでした（send_btn_error.pngを確認してください）"
                 else:
                     log_debug("送信ボタンが非表示または無効です。クリックをスキップします。")
                     # デバッグ用にスクリーンショットとHTMLを保存
@@ -409,26 +433,7 @@ def send_reply(email, reply_url, reply_text):
                     browser.close()
                     return False, "送信ボタンが非表示または無効です（send_btn_error.pngを確認してください）"
             except Exception as e:
-                log_debug(f"通常のクリックに失敗: {str(e)}")
-                try:
-                    # JavaScriptでクリックイベントを発火
-                    page.evaluate("(btn) => btn.click()", send_btn)
-                    log_debug("JavaScriptでクリックイベントを発火しました")
-                except Exception as js_error:
-                    log_debug(f"JavaScriptクリックに失敗: {str(js_error)}")
-                    try:
-                        # フォームのsubmit()を直接呼び出す
-                        page.evaluate("""
-                            (form) => {
-                                if (form && typeof form.submit === 'function') {
-                                    form.submit();
-                                }
-                            }
-                        """, send_btn.evaluate("btn => btn.form"))
-                        log_debug("フォームのsubmit()を直接呼び出しました")
-                    except Exception as submit_error:
-                        log_debug(f"フォームsubmitに失敗: {str(submit_error)}")
-                        return False, "送信ボタンのクリックに失敗しました"
+                log_debug(f"クリック処理全体で予期せぬエラー: {str(e)}")
             
             # 送信後の状態を確認
             try:
