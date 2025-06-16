@@ -317,13 +317,22 @@ def send_reply(email, reply_url, reply_text):
                 
             except Exception as e:
                 log_error(f"スクリーンショットの保存に失敗: {str(e)}", e)
-            # 返信フォームのtextareaを探す
-            textarea = page.query_selector("textarea[name='message']")
-            if not textarea:
-                context.close()
-                browser.close()
-                return False, "返信フォームが見つかりませんでした（debug_reply.pngを確認してください）"
-            
+            # 送信ボタンを探しておく
+            send_btn = page.query_selector("input[type='submit'], button[type='submit']")
+            if not send_btn:
+                # 代替のセレクターを試す
+                alternative_buttons = [
+                    "button:has-text('送信')",
+                    "input[value='送信']",
+                    ".submit-button",
+                    "#submit-button"
+                ]
+                for selector in alternative_buttons:
+                    send_btn = page.query_selector(selector)
+                    if send_btn:
+                        log_debug(f"送信ボタンが見つかりました: {selector}")
+                        break
+
             # --- 自動調査: フォーム構造・hiddenフィールド・イベント属性・関数名をログ出力 ---
             try:
                 # フォーム要素
@@ -338,10 +347,13 @@ def send_reply(email, reply_url, reply_text):
                 else:
                     log_debug("[自動調査] textarea.formが取得できませんでした")
                 # 送信ボタンのonclick属性・outerHTML
-                send_btn_html = send_btn.evaluate('el => el.outerHTML')
-                send_btn_onclick = send_btn.get_attribute('onclick')
-                log_debug(f"[自動調査] 送信ボタンouterHTML: {send_btn_html}")
-                log_debug(f"[自動調査] 送信ボタンonclick属性: {send_btn_onclick}")
+                if send_btn:
+                    send_btn_html = send_btn.evaluate('el => el.outerHTML')
+                    send_btn_onclick = send_btn.get_attribute('onclick')
+                    log_debug(f"[自動調査] 送信ボタンouterHTML: {send_btn_html}")
+                    log_debug(f"[自動調査] 送信ボタンonclick属性: {send_btn_onclick}")
+                else:
+                    log_debug("[自動調査] 送信ボタンが見つかりませんでした")
                 # windowオブジェクトの関数名一覧
                 window_keys = page.evaluate('() => Object.keys(window).filter(k => typeof window[k] === "function")')
                 log_debug(f"[自動調査] windowオブジェクトの関数名一覧: {window_keys}")
@@ -362,45 +374,6 @@ def send_reply(email, reply_url, reply_text):
             # テキストを入力
             textarea.fill(reply_text)
             log_debug("返信テキストを入力しました")
-            
-            # 送信ボタンを探してクリック
-            send_btn = page.query_selector("input[type='submit'], button[type='submit']")
-            if not send_btn:
-                # 代替のセレクターを試す
-                alternative_buttons = [
-                    "button:has-text('送信')",
-                    "input[value='送信']",
-                    ".submit-button",
-                    "#submit-button"
-                ]
-                for selector in alternative_buttons:
-                    send_btn = page.query_selector(selector)
-                    if send_btn:
-                        log_debug(f"送信ボタンが見つかりました: {selector}")
-                        break
-                if not send_btn:
-                    context.close()
-                    browser.close()
-                    return False, "送信ボタンが見つかりませんでした（debug_reply.pngを確認してください）"
-            
-            # --- 送信時のリクエスト内容をキャプチャ ---
-            request_log = []
-            def log_request(request):
-                if request.method == "POST":
-                    try:
-                        log_debug(f"POSTリクエスト: {request.url}")
-                        log_debug(f"POSTデータ: {request.post_data}")
-                        request_log.append({
-                            "url": request.url,
-                            "post_data": request.post_data
-                        })
-                    except Exception as e:
-                        log_debug(f"POSTリクエストのログ取得に失敗: {str(e)}")
-            page.on("request", log_request)
-            
-            # 送信ボタンの状態を確認
-            is_btn_disabled = send_btn.get_attribute("disabled")
-            log_debug(f"送信ボタンの状態: disabled={is_btn_disabled}")
             
             # 送信ボタンが有効になるまで待機
             try:
@@ -474,14 +447,9 @@ def send_reply(email, reply_url, reply_text):
                         if found:
                             log_debug("履歴ページで自分の送信内容を確認")
                             # --- 送信時のPOSTリクエストログも出力 ---
-                            if request_log:
-                                log_debug(f"送信時のPOSTリクエスト一覧: {request_log}")
                             return True, "返信を送信しました"
                         else:
                             log_debug("履歴ページに自分の送信内容が見つかりません")
-                            # --- 送信時のPOSTリクエストログも出力 ---
-                            if request_log:
-                                log_debug(f"送信時のPOSTリクエスト一覧: {request_log}")
                             return False, "送信処理は完了しましたが、履歴ページに自分の送信内容が見つかりませんでした。手動でご確認ください。"
                     except Exception as e:
                         log_debug(f"履歴ページ確認中にエラー: {str(e)}")
