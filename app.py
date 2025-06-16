@@ -444,7 +444,19 @@ def send_reply(email, reply_url, reply_text):
                     try:
                         page.wait_for_load_state("networkidle", timeout=5000)
                         time.sleep(1)
-                        # --- 追加: 履歴ページを2回リロードし、一定時間待ってから再度チェック ---
+                        # --- 追加: 履歴ページのHTMLを保存 ---
+                        history_html_path = os.path.join(screenshot_dir, "history_debug.html")
+                        with open(history_html_path, "w", encoding="utf-8") as f:
+                            f.write(page.content())
+                        log_debug(f"履歴ページのHTMLを保存: {history_html_path}")
+                        # --- 追加: 送信時のPOSTリクエスト内容を保存 ---
+                        if request_log:
+                            post_debug_path = os.path.join(screenshot_dir, "post_debug.json")
+                            import json as _json
+                            with open(post_debug_path, "w", encoding="utf-8") as f:
+                                _json.dump(request_log, f, ensure_ascii=False, indent=2)
+                            log_debug(f"送信時のPOSTリクエスト内容を保存: {post_debug_path}")
+                        # --- 追加ここまで ---
                         found = False
                         for reload_count in range(3):
                             if reload_count > 0:
