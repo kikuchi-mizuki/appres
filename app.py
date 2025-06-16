@@ -271,6 +271,7 @@ def check_cookie_valid(email):
 def send_reply(email, reply_url, reply_text):
     """Playwrightで指定メッセージに自動返信（タイムアウト延長＆デバッグ用スクリーンショット）"""
     try:
+        request_log = []  # ここで必ず初期化
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = load_cookies(browser, email)
