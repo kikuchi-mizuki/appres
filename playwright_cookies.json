@@ -1,0 +1,62 @@
+[
+  {
+    "name": ".aa",
+    "value": "7d08b08089d70841b20a0b8cdc5ce1bf09ba8a8f",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1757285436,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_iidt",
+    "value": "S+l0fjo7JN9uo3zsOGb+s7AWjoSf7akEt7+12FhLAHj+VlUkGu2gtK7QLYYBjWdg/pMpcspPz4Oo3g==",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1778666349,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "www_yyc_co_jp",
+    "value": "c08abb8326fc9bd0955f7884f6deec64",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": ".rr",
+    "value": "5bf6a7914220300090",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1778666352,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": ".a",
+    "value": "1ec913c0742129bad34e30d2bfb95607d9bccd64",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1757285436,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": ".r",
+    "value": "2794d94e1599effa8c49d3b256fded478d0b5b2b",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1778666352,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  }
+]

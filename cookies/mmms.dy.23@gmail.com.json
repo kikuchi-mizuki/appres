@@ -1,0 +1,132 @@
+[
+  {
+    "name": "_GRECAPTCHA",
+    "value": "09ANMylNAmdykW5R6raN9vroRCWGwyNVVOS-n0GwCptMXacnT0WnHx3Jfh08TIvXWS89uySfFKb6ure5nDbhqugZ4",
+    "domain": "www.google.com",
+    "path": "/recaptcha",
+    "expires": 1765061150.685124,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "SNID",
+    "value": "ABablnd85YcgmbokkbDKhP7kOnEKtJtCA8-mtBXGiAeXvaq7rT_9L2FHBdj7LvPEiazM5xuC8VMrv_emuzKihulDx2nAMKbgjTc",
+    "domain": ".google.com",
+    "path": "/verify",
+    "expires": 1765320348.213118,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "ldsuid",
+    "value": "461db319.6372b4fd1148c",
+    "domain": "www.yyc.co.jp",
+    "path": "/",
+    "expires": 1757285022.566206,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "www_yyc_co_jp",
+    "value": "97d4899e10d9a97af3ef665089512dde",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.1247392937.1749509023",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1784069022.807492,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.584361775.1749509023",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1757285022,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_yjsu_yjad",
+    "value": "1749509022.605ce92d-f2ff-44da-990b-a89f9bfe23f4",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1781045022,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "IDE",
+    "value": "AHWqTUkONHSa6eG0XsYqGj1KqUgH2Hcl6bt1-Q_noMbWO_nXVTh6vgLVBCF0c03F",
+    "domain": ".doubleclick.net",
+    "path": "/",
+    "expires": 1784069040.54635,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "AEC",
+    "value": "AVh_V2ijjye_s8bVFX9fTtG6lRvSZPSYRpxfATjmrq_a_NE5qtf-VjOlw3s",
+    "domain": ".google.com",
+    "path": "/",
+    "expires": 1765061148.065961,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "GOOGLE_ABUSE_EXEMPTION",
+    "value": "ID=cb3cc54e22b04bf6:TM=1749509148:C=R:IP=113.32.186.176-:S=D6XWCqRDT424c1XasCk_fF8",
+    "domain": ".google.com",
+    "path": "/",
+    "expires": 1749519948.909308,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "DV",
+    "value": "4-AO1spnmA0WMMNiN6YW-gaEd_dtdRk",
+    "domain": "www.google.com",
+    "path": "/",
+    "expires": 1749509775,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "NID",
+    "value": "524=dnHzoylLDu0lIELruA1ec3PsEq6i7cc32gfI9Rw90kiIRsKD9vIrOkhPErjvMxntTc-QnPJWNipU9w23LdkFNs-jlRFhZaIJzYfwDzdJLjF66bkVaPOd0KFhzqA1XwLVVLV88mGyGUoja2ylzX2dxzaCnzPe3FONB_drDkXvsqgjxW7gJv_6rYlSKpCiZa9KCE0-0J3y0mkg0C73W1wnhqgdZlODJU06rCf89dEPPUiNTyz9hqNPm-E75Eha",
+    "domain": ".google.com",
+    "path": "/",
+    "expires": 1765320348.514556,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_ga_4PSS22BYSL",
+    "value": "GS2.1.s1749509022$o1$g1$t1749509222$j21$l0$h0",
+    "domain": ".yyc.co.jp",
+    "path": "/",
+    "expires": 1784069222.9017,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  }
+]

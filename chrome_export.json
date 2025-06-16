@@ -1,0 +1,79 @@
+[
+    {
+        "domain": ".yyc.co.jp",
+        "expirationDate": 1757285436.042865,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": ".aa",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "7d08b08089d70841b20a0b8cdc5ce1bf09ba8a8f"
+    },
+    {
+        "domain": ".yyc.co.jp",
+        "expirationDate": 1778666349.127232,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": "_iidt",
+        "path": "/",
+        "sameSite": "no_restriction",
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "S+l0fjo7JN9uo3zsOGb+s7AWjoSf7akEt7+12FhLAHj+VlUkGu2gtK7QLYYBjWdg/pMpcspPz4Oo3g=="
+    },
+    {
+        "domain": ".yyc.co.jp",
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": "www_yyc_co_jp",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": true,
+        "storeId": null,
+        "value": "c08abb8326fc9bd0955f7884f6deec64"
+    },
+    {
+        "domain": ".yyc.co.jp",
+        "expirationDate": 1778666352.687871,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": ".rr",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "5bf6a7914220300090"
+    },
+    {
+        "domain": ".yyc.co.jp",
+        "expirationDate": 1757285436.044663,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": ".a",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "1ec913c0742129bad34e30d2bfb95607d9bccd64"
+    },
+    {
+        "domain": ".yyc.co.jp",
+        "expirationDate": 1778666352.688044,
+        "hostOnly": false,
+        "httpOnly": true,
+        "name": ".r",
+        "path": "/",
+        "sameSite": null,
+        "secure": true,
+        "session": false,
+        "storeId": null,
+        "value": "2794d94e1599effa8c49d3b256fded478d0b5b2b"
+    }
+]
