@@ -381,13 +381,33 @@ def send_reply(email, reply_url, reply_text):
             except Exception as e:
                 log_debug(f"送信ボタンの有効化待機中にタイムアウト: {str(e)}")
             
+            # クリック前の状態を確認しログ出力
+            if send_btn:
+                is_visible = send_btn.is_visible()
+                is_enabled = send_btn.is_enabled()
+                log_debug(f"送信ボタン: visible={is_visible}, enabled={is_enabled}")
+            else:
+                is_visible = False
+                is_enabled = False
+                log_debug("送信ボタンがNoneです")
+
             # クリックを試みる
             try:
                 # クリック前に少し待機
                 time.sleep(1)
-                # 通常のクリックを試みる
-                send_btn.click(timeout=5000)
-                log_debug("送信ボタンをクリックしました")
+                if send_btn and is_visible and is_enabled:
+                    send_btn.click(timeout=10000)
+                    log_debug("送信ボタンをクリックしました")
+                else:
+                    log_debug("送信ボタンが非表示または無効です。クリックをスキップします。")
+                    # デバッグ用にスクリーンショットとHTMLを保存
+                    error_screenshot_path = os.path.join(screenshot_dir, "send_btn_error.png")
+                    page.screenshot(path=error_screenshot_path)
+                    log_debug(f"送信ボタンエラー時のスクリーンショットを保存: {error_screenshot_path}")
+                    log_debug(page.content()[:1000])
+                    context.close()
+                    browser.close()
+                    return False, "送信ボタンが非表示または無効です（send_btn_error.pngを確認してください）"
             except Exception as e:
                 log_debug(f"通常のクリックに失敗: {str(e)}")
                 try:
