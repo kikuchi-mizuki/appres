@@ -16,6 +16,7 @@ from io import BytesIO
 import logging
 import pickle
 import os.path
+import subprocess
 
 # ロギングの設定
 logging.basicConfig(
@@ -450,13 +451,16 @@ def send_reply(email, reply_url, reply_text):
                             os.makedirs(screenshot_dir, exist_ok=True)
                             history_html_path = os.path.join(screenshot_dir, "history_debug.html")
                             with open(history_html_path, "w", encoding="utf-8") as f:
-                                f.write(page.content())
+                                content = page.content()
+                                f.write(content)
                                 f.flush()
                                 os.fsync(f.fileno())
                             if os.path.exists(history_html_path):
                                 log_debug(f"[保存確認] {history_html_path} が正常に保存されました")
+                                log_debug(f"[保存内容先頭1000] {content[:1000]}")
                             else:
                                 log_debug(f"[保存確認] {history_html_path} が保存されていません！")
+                                log_debug(f"[保存内容先頭1000] {content[:1000]}")
                         except Exception as e:
                             log_debug(f"[失敗時も保存] 履歴ページHTML保存に失敗: {str(e)} (パス: {history_html_path})")
                         # --- 追加: 送信時のPOSTリクエスト内容を保存 ---
@@ -551,13 +555,27 @@ def send_reply(email, reply_url, reply_text):
                         os.makedirs(screenshot_dir, exist_ok=True)
                         history_html_path = os.path.join(screenshot_dir, "history_debug.html")
                         with open(history_html_path, "w", encoding="utf-8") as f:
-                            f.write(page.content())
+                            content = page.content()
+                            f.write(content)
                             f.flush()
                             os.fsync(f.fileno())
                         if os.path.exists(history_html_path):
                             log_debug(f"[保存確認] {history_html_path} が正常に保存されました")
+                            log_debug(f"[保存内容先頭1000] {content[:1000]}")
                         else:
                             log_debug(f"[保存確認] {history_html_path} が保存されていません！")
+                            log_debug(f"[保存内容先頭1000] {content[:1000]}")
+                        # 直後にls -lとfindの結果も出力
+                        try:
+                            ls_result = subprocess.check_output(["ls", "-l", screenshot_dir], encoding="utf-8")
+                            log_debug(f"[ls結果] {ls_result}")
+                        except Exception as e:
+                            log_debug(f"[ls結果エラー] {str(e)}")
+                        try:
+                            find_result = subprocess.check_output(["find", screenshot_dir, "-name", "history_debug.html"], encoding="utf-8")
+                            log_debug(f"[find結果] {find_result}")
+                        except Exception as e:
+                            log_debug(f"[find結果エラー] {str(e)}")
                     except Exception as e:
                         log_debug(f"[失敗時も保存] 履歴ページHTML保存に失敗: {str(e)} (パス: {history_html_path})")
             except Exception as e:
