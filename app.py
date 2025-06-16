@@ -449,11 +449,12 @@ def send_reply(email, reply_url, reply_text):
                         try:
                             os.makedirs(screenshot_dir, exist_ok=True)
                             history_html_path = os.path.join(screenshot_dir, "history_debug.html")
+                            abs_path = os.path.abspath(history_html_path)
                             with open(history_html_path, "w", encoding="utf-8") as f:
                                 f.write(page.content())
-                            log_debug(f"履歴ページのHTMLを保存: {history_html_path}")
+                            log_debug(f"履歴ページのHTMLを保存: {history_html_path} (絶対パス: {abs_path})")
                         except Exception as e:
-                            log_debug(f"履歴ページHTML保存に失敗: {str(e)}")
+                            log_debug(f"履歴ページHTML保存に失敗: {str(e)} (パス: {abs_path})")
                         # --- 追加: 送信時のPOSTリクエスト内容を保存 ---
                         if request_log:
                             post_debug_path = os.path.join(screenshot_dir, "post_debug.json")
