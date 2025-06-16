@@ -452,9 +452,9 @@ def send_reply(email, reply_url, reply_text):
                             abs_path = os.path.abspath(history_html_path)
                             with open(history_html_path, "w", encoding="utf-8") as f:
                                 f.write(page.content())
-                            log_debug(f"履歴ページのHTMLを保存: {history_html_path} (絶対パス: {abs_path})")
+                            log_debug(f"[失敗時も保存] 履歴ページのHTMLを保存: {history_html_path} (絶対パス: {abs_path})")
                         except Exception as e:
-                            log_debug(f"履歴ページHTML保存に失敗: {str(e)} (パス: {abs_path})")
+                            log_debug(f"[失敗時も保存] 履歴ページHTML保存に失敗: {str(e)} (パス: {abs_path})")
                         # --- 追加: 送信時のPOSTリクエスト内容を保存 ---
                         if request_log:
                             post_debug_path = os.path.join(screenshot_dir, "post_debug.json")
@@ -541,11 +541,17 @@ def send_reply(email, reply_url, reply_text):
                     except Exception:
                         continue
                 
-                # 送信成功の確認（URLの変更を確認）
-                if "history" in current_url and "id=" in current_url:
-                    log_debug("送信成功を確認: URLが履歴ページに遷移")
-                    return True, "返信を送信しました"
-                
+                # 送信成功しなかった場合もHTMLを保存
+                else:
+                    try:
+                        os.makedirs(screenshot_dir, exist_ok=True)
+                        history_html_path = os.path.join(screenshot_dir, "history_debug.html")
+                        abs_path = os.path.abspath(history_html_path)
+                        with open(history_html_path, "w", encoding="utf-8") as f:
+                            f.write(page.content())
+                        log_debug(f"[失敗時も保存] 履歴ページのHTMLを保存: {history_html_path} (絶対パス: {abs_path})")
+                    except Exception as e:
+                        log_debug(f"[失敗時も保存] 履歴ページHTML保存に失敗: {str(e)} (パス: {abs_path})")
             except Exception as e:
                 log_debug(f"ページ読み込み待機中にタイムアウト: {str(e)}")
             
