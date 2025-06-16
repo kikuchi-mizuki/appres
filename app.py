@@ -457,10 +457,21 @@ def send_reply(email, reply_url, reply_text):
                                 os.fsync(f.fileno())
                             if os.path.exists(history_html_path):
                                 log_debug(f"[保存確認] {history_html_path} が正常に保存されました")
-                                log_debug(f"[保存内容先頭10000] {content[:10000]}")
+                                log_debug(f"[保存内容先頭20000] {content[:20000]}")
+                                # 送信ページ（返信ページ）のHTMLも保存・ログ出力
+                                try:
+                                    send_page_path = os.path.join(screenshot_dir, "send_page_debug.html")
+                                    with open(send_page_path, "w", encoding="utf-8") as sf:
+                                        send_page_content = page.content()
+                                        sf.write(send_page_content)
+                                        sf.flush()
+                                        os.fsync(sf.fileno())
+                                    log_debug(f"[送信ページHTML先頭20000] {send_page_content[:20000]}")
+                                except Exception as e:
+                                    log_debug(f"[送信ページHTML保存エラー] {str(e)}")
                             else:
                                 log_debug(f"[保存確認] {history_html_path} が保存されていません！")
-                                log_debug(f"[保存内容先頭10000] {content[:10000]}")
+                                log_debug(f"[保存内容先頭20000] {content[:20000]}")
                         except Exception as e:
                             log_debug(f"[失敗時も保存] 履歴ページHTML保存に失敗: {str(e)} (パス: {history_html_path})")
                         # --- 追加: 送信時のPOSTリクエスト内容を保存 ---
@@ -561,10 +572,21 @@ def send_reply(email, reply_url, reply_text):
                             os.fsync(f.fileno())
                         if os.path.exists(history_html_path):
                             log_debug(f"[保存確認] {history_html_path} が正常に保存されました")
-                            log_debug(f"[保存内容先頭10000] {content[:10000]}")
+                            log_debug(f"[保存内容先頭20000] {content[:20000]}")
+                            # 送信ページ（返信ページ）のHTMLも保存・ログ出力
+                            try:
+                                send_page_path = os.path.join(screenshot_dir, "send_page_debug.html")
+                                with open(send_page_path, "w", encoding="utf-8") as sf:
+                                    send_page_content = page.content()
+                                    sf.write(send_page_content)
+                                    sf.flush()
+                                    os.fsync(sf.fileno())
+                                log_debug(f"[送信ページHTML先頭20000] {send_page_content[:20000]}")
+                            except Exception as e:
+                                log_debug(f"[送信ページHTML保存エラー] {str(e)}")
                         else:
                             log_debug(f"[保存確認] {history_html_path} が保存されていません！")
-                            log_debug(f"[保存内容先頭10000] {content[:10000]}")
+                            log_debug(f"[保存内容先頭20000] {content[:20000]}")
                         # 直後にls -lとfindの結果も出力
                         try:
                             ls_result = subprocess.check_output(["ls", "-l", screenshot_dir], encoding="utf-8")
