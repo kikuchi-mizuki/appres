@@ -327,12 +327,12 @@ def send_reply(email, reply_url, reply_text):
             # --- 自動調査: フォーム構造・hiddenフィールド・イベント属性・関数名をログ出力 ---
             try:
                 # フォーム要素
-                form = textarea.evaluate('el => el.form')
-                if form:
-                    form_html = page.evaluate('(form) => form.outerHTML', form)
+                form_handle = textarea.evaluate_handle('el => el.form')
+                if form_handle:
+                    form_html = form_handle.evaluate('form => form.outerHTML')
                     log_debug(f"[自動調査] 送信フォームのHTML:\n{form_html}")
                     # hiddenフィールド・input一覧
-                    inputs = page.evaluate('form => Array.from(form.querySelectorAll("input,textarea")).map(i => ({name: i.name, type: i.type, value: i.value, hidden: i.type==="hidden"}))', form)
+                    inputs = form_handle.evaluate('form => Array.from(form.querySelectorAll("input,textarea")).map(i => ({name: i.name, type: i.type, value: i.value, hidden: i.type==="hidden"}))')
                     for inp in inputs:
                         log_debug(f"[自動調査] input: name={inp['name']}, type={inp['type']}, value={inp['value']}, hidden={inp['hidden']}")
                 else:
