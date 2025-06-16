@@ -324,6 +324,30 @@ def send_reply(email, reply_url, reply_text):
                 browser.close()
                 return False, "返信フォームが見つかりませんでした（debug_reply.pngを確認してください）"
             
+            # --- 自動調査: フォーム構造・hiddenフィールド・イベント属性・関数名をログ出力 ---
+            try:
+                # フォーム要素
+                form = textarea.evaluate('el => el.form')
+                if form:
+                    form_html = page.evaluate('(form) => form.outerHTML', form)
+                    log_debug(f"[自動調査] 送信フォームのHTML:\n{form_html}")
+                    # hiddenフィールド・input一覧
+                    inputs = page.evaluate('form => Array.from(form.querySelectorAll("input,textarea")).map(i => ({name: i.name, type: i.type, value: i.value, hidden: i.type==="hidden"}))', form)
+                    for inp in inputs:
+                        log_debug(f"[自動調査] input: name={inp['name']}, type={inp['type']}, value={inp['value']}, hidden={inp['hidden']}")
+                else:
+                    log_debug("[自動調査] textarea.formが取得できませんでした")
+                # 送信ボタンのonclick属性・outerHTML
+                send_btn_html = send_btn.evaluate('el => el.outerHTML')
+                send_btn_onclick = send_btn.get_attribute('onclick')
+                log_debug(f"[自動調査] 送信ボタンouterHTML: {send_btn_html}")
+                log_debug(f"[自動調査] 送信ボタンonclick属性: {send_btn_onclick}")
+                # windowオブジェクトの関数名一覧
+                window_keys = page.evaluate('() => Object.keys(window).filter(k => typeof window[k] === "function")')
+                log_debug(f"[自動調査] windowオブジェクトの関数名一覧: {window_keys}")
+            except Exception as e:
+                log_debug(f"[自動調査] フォーム構造等の自動調査中にエラー: {str(e)}")
+            
             # フォームの状態を確認
             is_disabled = textarea.get_attribute("disabled")
             is_readonly = textarea.get_attribute("readonly")
