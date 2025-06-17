@@ -617,34 +617,75 @@ def main():
     if 'user_password' not in st.session_state:
         st.session_state.user_password = ""
     
-    # 柔らかい・スマホ対応の追加CSS（タイトル小さめ＆グレー、メッセージ全文表示）
-    st.markdown("""
+    # --- 追加CSS ---
+    st.markdown('''
     <style>
     body, .stApp {
-        font-family: 'Noto Sans JP', sans-serif;
-        background-color: #fff6fa;
+      font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
+      background: linear-gradient(180deg, #fefefe 0%, #fdf2f8 100%);
     }
-    h1, .stMarkdown h1 { font-size: 1.8rem !important; color: #444 !important; }
-    h2, .stMarkdown h2 { font-size: 1.3rem !important; color: #555 !important; }
-    .user-card, .assistant-card {
-        white-space: pre-wrap !important;
-        word-break: break-word;
-        overflow-wrap: break-word;
-        overflow: visible !important;
-        max-height: none !important;
+
+    h1, .stMarkdown h1 { font-size: 1.8rem !important; color: #333 !important; }
+    h2, .stMarkdown h2 { font-size: 1.4rem !important; color: #444 !important; }
+    h3, .stMarkdown h3 { font-size: 1.2rem !important; color: #444 !important; }
+
+    .user-card, .assistant-card, .reply-box {
+      max-width: 640px;
+      margin: 1.2em auto;
+      padding: 1.2em 1.5em;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 2px 12px rgba(249, 199, 209, 0.10);
+      color: #555;
+      line-height: 1.6;
     }
-    .stButton > button {
-        width: 100% !important;
-        white-space: normal !important;
-        font-size: 1.1em;
-        padding: 0.9em;
-        border-radius: 20px;
-        background: linear-gradient(90deg, #f9c7d1 0%, #f7e9f0 100%);
-        border: none;
-        box-shadow: 0 2px 8px rgba(249, 199, 209, 0.3);
+    .reply-box {
+      border: 1.5px solid #f9c7d1;
+      background: #fdf2f8;
+      box-shadow: 0 2px 8px rgba(249, 199, 209, 0.13);
+      margin-bottom: 1.2em;
+    }
+    .reply-text {
+      color: #666;
+      font-size: 1.08rem;
+      margin-bottom: 0.8em;
+      white-space: pre-wrap;
+    }
+    .reply-actions {
+      display: flex;
+      gap: 1em;
+      justify-content: center;
+    }
+    .reply-actions button {
+      background: linear-gradient(90deg, #f9c7d1, #f7e9f0);
+      border-radius: 12px;
+      padding: 0.8em 1.5em;
+      font-size: 1rem;
+      border: none;
+      transition: 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5em;
+    }
+    .reply-actions button:hover {
+      background: linear-gradient(90deg, #f7e9f0, #f9c7d1);
+      color: #c94f7c;
+    }
+    .scrollable-chat {
+      max-width: 640px;
+      margin: auto;
+    }
+    @media (max-width: 700px) {
+      .user-card, .assistant-card, .reply-box, .scrollable-chat {
+        max-width: 98vw;
+        padding: 1em 0.5em;
+      }
+      .reply-actions { flex-direction: column; gap: 0.7em; }
     }
     </style>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
 
     # タイトルを親しみやすく小さめに
     st.title("📨 YYCで届いたメッセージに楽しく返信しよう♪")
@@ -721,23 +762,23 @@ def main():
     with st.container():
         st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
-            # 送信者のメッセージ（色分けカード）
             st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
-            # 返信候補（自動生成済み）
             if 'replies' in st.session_state and i < len(st.session_state.replies):
                 reply = st.session_state.replies[i]
-                st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
-                col1, col2 = st.columns(2)
-                with col1:
-                    # ワンクリックコピーUI
-                    components.html(f'''
-                        <textarea id="replyText_{i}" style="width:100%;height:80px;">{reply}</textarea>
-                        <button onclick="navigator.clipboard.writeText(document.getElementById('replyText_{i}').value);alert('コピーしました！');">📋 ワンクリックコピー</button>
-                    ''', height=120)
-                with col2:
-                    if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
-                        st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
-                        st.experimental_rerun()
+                st.markdown(f"""
+                <div class='reply-box'>
+                  <p class='reply-text'>{reply}</p>
+                  <div class='reply-actions'>
+                    <button onclick="navigator.clipboard.writeText(this.closest('.reply-box').querySelector('.reply-text').innerText);alert('コピーしました！');">📋 コピー</button>
+                    <form method='post'><button name='regen' value='{i}' type='submit'>🔄 再作成</button></form>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+                # 再作成ボタンの処理
+                if st.session_state.get('regen') == str(i):
+                    st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
+                    st.session_state['regen'] = None
+                    st.experimental_rerun()
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
