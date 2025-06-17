@@ -759,24 +759,16 @@ def main():
         st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
             st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span></div>", unsafe_allow_html=True)
-            st.write(message['content'])  # 本文を全文表示
+            st.text_area("メッセージ本文", message['content'], key=f"msg_{i}", height=100, disabled=True)
             if 'replies' in st.session_state and i < len(st.session_state.replies):
                 reply = st.session_state.replies[i]
                 with st.container():
                     st.markdown("<div class='reply-box'>", unsafe_allow_html=True)
-                    st.text_area("返信文", reply, key=f"reply_area_{i}", height=80)
-                    cols = st.columns([1,1])
-                    with cols[0]:
-                        if st.button("📋 コピー", key=f"copy_reply_{i}"):
-                            try:
-                                pyperclip.copy(reply)
-                                st.success("✅ 返信文をクリップボードにコピーしました")
-                            except Exception:
-                                st.warning("クリップボードへのコピーに失敗しました。手動でコピーしてください。")
-                    with cols[1]:
-                        if st.button("🔄 再作成", key=f"regen_reply_{i}"):
-                            st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
-                            st.experimental_rerun()
+                    st.text_area("返信文", reply, key=f"reply_area_{i}", height=100)
+                    st.info("返信文を選択して Ctrl+C / Cmd+C でコピーしてください。")
+                    if st.button("🔄 再作成", key=f"regen_reply_{i}"):
+                        st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
+                        st.experimental_rerun()
                     st.markdown("</div>", unsafe_allow_html=True)
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
