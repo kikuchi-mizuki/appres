@@ -19,6 +19,7 @@ import os.path
 import subprocess
 import streamlit.components.v1 as components
 import pyperclip
+from streamlit_copy_to_clipboard import st_copy_to_clipboard
 
 # ロギングの設定
 logging.basicConfig(
@@ -759,13 +760,13 @@ def main():
         st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
             st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span></div>", unsafe_allow_html=True)
-            st.text_area("メッセージ本文", message['content'], key=f"msg_{i}", height=100, disabled=True)
+            st.code(message['content'], language="")  # 本文を全文表示
             if 'replies' in st.session_state and i < len(st.session_state.replies):
                 reply = st.session_state.replies[i]
                 with st.container():
                     st.markdown("<div class='reply-box'>", unsafe_allow_html=True)
                     st.text_area("返信文", reply, key=f"reply_area_{i}", height=100)
-                    st.info("返信文を選択して Ctrl+C / Cmd+C でコピーしてください。")
+                    st_copy_to_clipboard(reply, "📋 コピー", "✅ コピーしました！")
                     if st.button("🔄 再作成", key=f"regen_reply_{i}"):
                         st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
                         st.experimental_rerun()
