@@ -8,13 +8,13 @@ if [ -z "$CONTAINER_ID" ]; then
     exit 1
 fi
 
-# デバッグファイルをローカルにコピー
-echo "デバッグファイルをコピー中..."
-docker cp $CONTAINER_ID:/app/send_form_debug.html ./send_form_debug.html
+# デバッグファイルをコンテナからローカルにコピー
+echo "デバッグファイルを取得中..."
 docker cp $CONTAINER_ID:/app/send_form_outer_debug.html ./send_form_outer_debug.html
-docker cp $CONTAINER_ID:/app/send_button_error.png ./send_button_error.png
-docker cp $CONTAINER_ID:/app/send_form_no_button.png ./send_form_no_button.png
 docker cp $CONTAINER_ID:/app/send_form_outer_debug_after_wait.html ./send_form_outer_debug_after_wait.html
+docker cp $CONTAINER_ID:/app/send_form_outer_debug_after_scroll.html ./send_form_outer_debug_after_scroll.html
+docker cp $CONTAINER_ID:/app/send_form_no_button.png ./send_form_no_button.png
 docker cp $CONTAINER_ID:/app/send_form_no_button_after_wait.png ./send_form_no_button_after_wait.png
+docker cp $CONTAINER_ID:/app/send_form_no_button_after_scroll.png ./send_form_no_button_after_scroll.png
 
-echo "デバッグファイルのコピーが完了しました" 
+echo "完了！" 

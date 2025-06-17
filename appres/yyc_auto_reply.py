@@ -37,8 +37,23 @@ try:
             btn_html2 = await btn2.evaluate('el => el.outerHTML')
             logger.info(f"[再取得]送信ボタン{i} outerHTML: {btn_html2}")
         if count2 == 0:
-            logger.warning("[再取得]送信ボタンがフォーム内に見つかりません。フォーム全体のスクリーンショットを保存します。")
-            await page.locator('form#send-mail-form').screenshot(path='send_form_no_button_after_wait.png')
+            logger.warning("[再取得]送信ボタンがフォーム内に見つかりません。スクロール後に再取得します。")
+            await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+            await page.wait_for_timeout(1000)
+            send_form_outer_html3 = await page.locator('form#send-mail-form').evaluate('el => el.outerHTML')
+            with open('send_form_outer_debug_after_scroll.html', 'w', encoding='utf-8') as f:
+                f.write(send_form_outer_html3)
+            logger.info(f"[スクロール後]送信フォームouterHTML: {send_form_outer_html3[:2000]}...")
+            send_buttons3 = page.locator('form#send-mail-form input[type=\"submit\"], form#send-mail-form button[type=\"submit\"]')
+            count3 = await send_buttons3.count()
+            logger.info(f"[スクロール後]送信ボタン候補の数: {count3}")
+            for i in range(count3):
+                btn3 = send_buttons3.nth(i)
+                btn_html3 = await btn3.evaluate('el => el.outerHTML')
+                logger.info(f"[スクロール後]送信ボタン{i} outerHTML: {btn_html3}")
+            if count3 == 0:
+                logger.warning("[スクロール後]送信ボタンがフォーム内に見つかりません。フォーム全体のスクリーンショットを保存します。")
+                await page.locator('form#send-mail-form').screenshot(path='send_form_no_button_after_scroll.png')
 
     # 送信ボタンをクリック
     await send_buttons.click()
