@@ -17,6 +17,7 @@ import logging
 import pickle
 import os.path
 import subprocess
+import streamlit.components.v1 as components
 
 # ロギングの設定
 logging.basicConfig(
@@ -728,13 +729,13 @@ def main():
                 st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
                 col1, col2 = st.columns(2)
                 with col1:
-                    # コピー用テキストエリア（Webクリップボード対応）
-                    st.text_area("返信文をコピー", reply, key=f"copy_area_{i}")
-                    if st.button("📋 コピー", key=f"copy_reply_{i}", use_container_width=True):
-                        st.success("✅ 返信文を選択してコピーしてください（Ctrl+C / Cmd+C）")
+                    # ワンクリックコピーUI
+                    components.html(f'''
+                        <textarea id="replyText_{i}" style="width:100%;height:80px;">{reply}</textarea>
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('replyText_{i}').value);alert('コピーしました！');">📋 ワンクリックコピー</button>
+                    ''', height=120)
                 with col2:
                     if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
-                        # 返信文を再生成
                         st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
                         st.experimental_rerun()
             if i < len(st.session_state.messages) - 1:
