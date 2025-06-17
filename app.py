@@ -18,6 +18,7 @@ import pickle
 import os.path
 import subprocess
 import streamlit.components.v1 as components
+import pyperclip
 
 # ロギングの設定
 logging.basicConfig(
@@ -762,23 +763,24 @@ def main():
     with st.container():
         st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
-            st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span><br>{message['content']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span></div>", unsafe_allow_html=True)
+            st.write(message['content'])  # 本文を全文表示
             if 'replies' in st.session_state and i < len(st.session_state.replies):
                 reply = st.session_state.replies[i]
-                st.markdown(f"""
-                <div class='reply-box'>
-                  <p class='reply-text'>{reply}</p>
-                  <div class='reply-actions'>
-                    <button onclick="navigator.clipboard.writeText(this.closest('.reply-box').querySelector('.reply-text').innerText);alert('コピーしました！');">📋 コピー</button>
-                    <form method='post'><button name='regen' value='{i}' type='submit'>🔄 再作成</button></form>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
-                # 再作成ボタンの処理
-                if st.session_state.get('regen') == str(i):
-                    st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
-                    st.session_state['regen'] = None
-                    st.experimental_rerun()
+                st.markdown(f"<div class='reply-box'><p class='reply-text'>{reply}</p></div>", unsafe_allow_html=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.text_area("返信文", reply, key=f"reply_area_{i}", height=80)
+                    if st.button("📋 コピー", key=f"copy_reply_{i}"):
+                        try:
+                            pyperclip.copy(reply)
+                            st.success("✅ 返信文をクリップボードにコピーしました")
+                        except Exception:
+                            st.warning("クリップボードへのコピーに失敗しました。手動でコピーしてください。")
+                with col2:
+                    if st.button("🔄 再作成", key=f"regen_reply_{i}"):
+                        st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
+                        st.experimental_rerun()
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
