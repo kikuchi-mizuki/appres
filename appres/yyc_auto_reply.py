@@ -22,8 +22,23 @@ try:
         logger.info(f"送信ボタン{i} outerHTML: {btn_html}")
 
     if count == 0:
-        logger.warning("送信ボタンがフォーム内に見つかりません。フォーム全体のスクリーンショットを保存します。")
-        await page.locator('form#send-mail-form').screenshot(path='send_form_no_button.png')
+        logger.warning("送信ボタンがフォーム内に見つかりません。2秒待って再取得します。")
+        await page.wait_for_timeout(2000)
+        # 再取得
+        send_form_outer_html2 = await page.locator('form#send-mail-form').evaluate('el => el.outerHTML')
+        with open('send_form_outer_debug_after_wait.html', 'w', encoding='utf-8') as f:
+            f.write(send_form_outer_html2)
+        logger.info(f"[再取得]送信フォームouterHTML: {send_form_outer_html2[:2000]}...")
+        send_buttons2 = page.locator('form#send-mail-form input[type=\"submit\"], form#send-mail-form button[type=\"submit\"]')
+        count2 = await send_buttons2.count()
+        logger.info(f"[再取得]送信ボタン候補の数: {count2}")
+        for i in range(count2):
+            btn2 = send_buttons2.nth(i)
+            btn_html2 = await btn2.evaluate('el => el.outerHTML')
+            logger.info(f"[再取得]送信ボタン{i} outerHTML: {btn_html2}")
+        if count2 == 0:
+            logger.warning("[再取得]送信ボタンがフォーム内に見つかりません。フォーム全体のスクリーンショットを保存します。")
+            await page.locator('form#send-mail-form').screenshot(path='send_form_no_button_after_wait.png')
 
     # 送信ボタンをクリック
     await send_buttons.click()
