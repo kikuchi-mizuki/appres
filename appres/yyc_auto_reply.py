@@ -70,6 +70,19 @@ try:
     else:
         logger.warning(f"送信後のURLが想定外: {current_url}")
 
+    # ページ全体のHTMLを保存
+    full_html = await page.content()
+    with open('page_full_debug.html', 'w', encoding='utf-8') as f:
+        f.write(full_html)
+    logger.info(f"ページ全体のHTMLを保存しました（先頭2000文字）: {full_html[:2000]}...")
+
+    # ページ全体から送信ボタン候補を自動抽出
+    import re
+    submit_buttons = re.findall(r'<(input|button)[^>]*type=["\"]submit["\"][^>]*>', full_html)
+    logger.info(f"ページ全体から抽出した送信ボタン候補の数: {len(submit_buttons)}")
+    for i, btn_html in enumerate(submit_buttons):
+        logger.info(f"[全体探索]送信ボタン候補{i}: {btn_html}")
+
 except Exception as e:
     logger.error(f"送信ボタンのクリックに失敗: {str(e)}")
     # スクリーンショットを保存

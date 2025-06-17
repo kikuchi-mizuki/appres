@@ -16,5 +16,6 @@ docker cp $CONTAINER_ID:/app/send_form_outer_debug_after_scroll.html ./send_form
 docker cp $CONTAINER_ID:/app/send_form_no_button.png ./send_form_no_button.png
 docker cp $CONTAINER_ID:/app/send_form_no_button_after_wait.png ./send_form_no_button_after_wait.png
 docker cp $CONTAINER_ID:/app/send_form_no_button_after_scroll.png ./send_form_no_button_after_scroll.png
+docker cp $CONTAINER_ID:/app/page_full_debug.html ./page_full_debug.html
 
 echo "完了！" 
