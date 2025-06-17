@@ -728,16 +728,15 @@ def main():
                 st.markdown(f"<div class='assistant-card'><b>アシスタント</b><br>{reply}</div>", unsafe_allow_html=True)
                 col1, col2 = st.columns(2)
                 with col1:
+                    # コピー用テキストエリア（Webクリップボード対応）
+                    st.text_area("返信文をコピー", reply, key=f"copy_area_{i}")
                     if st.button("📋 コピー", key=f"copy_reply_{i}", use_container_width=True):
-                        st.success("✅ 返信文をコピーしました")
+                        st.success("✅ 返信文を選択してコピーしてください（Ctrl+C / Cmd+C）")
                 with col2:
-                    if st.button("📨 返信", key=f"send_reply_{i}", use_container_width=True):
-                        with st.spinner("返信を送信中..."):
-                            success, msg = send_reply(st.session_state.user_email, message.get("reply_url"), reply)
-                            if success:
-                                st.success("✅ 返信を送信しました")
-                            else:
-                                st.error(f"❌ {msg}")
+                    if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
+                        # 返信文を再生成
+                        st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
+                        st.experimental_rerun()
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
