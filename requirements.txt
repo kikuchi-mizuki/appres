@@ -1,4 +1,4 @@
-streamlit==1.32.0
+streamlit>=1.41.1
 playwright==1.42.0
 openai==0.28.0
 python-dotenv==1.0.1
@@ -11,4 +11,5 @@ tornado==6.3.3
 protobuf==4.25.3
 pytz==2024.1
 pyperclip
-streamlit-copy-to-clipboard 
+streamlit-copy-to-clipboard
+streamlit-clipboard 
