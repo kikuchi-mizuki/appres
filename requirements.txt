@@ -11,5 +11,4 @@ tornado==6.3.3
 protobuf==4.25.3
 pytz==2024.1
 pyperclip
-streamlit-copy-to-clipboard
 streamlit-clipboard 
