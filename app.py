@@ -19,7 +19,7 @@ import os.path
 import subprocess
 import streamlit.components.v1 as components
 import pyperclip
-from streamlit_extras.copy_to_clipboard import copy_to_clipboard_button
+from copy_to_clipboard import copy_to_clipboard_button
 
 # ロギングの設定
 logging.basicConfig(
