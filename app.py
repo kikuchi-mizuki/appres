@@ -816,6 +816,28 @@ def main():
       max-width: 640px;
       margin: auto;
     }
+    
+    /* コードブロックのスタイル改善 */
+    .stCode {
+      background: #f8f9fa !important;
+      border: 1px solid #e9ecef !important;
+      border-radius: 8px !important;
+      padding: 12px !important;
+      margin: 8px 0 !important;
+      font-family: 'Courier New', monospace !important;
+      font-size: 14px !important;
+      line-height: 1.4 !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    }
+    .stCode:hover {
+      background: #e9ecef !important;
+      border-color: #dee2e6 !important;
+    }
+    .stCode:active {
+      background: #dee2e6 !important;
+    }
+    
     @media (max-width: 700px) {
       .user-card, .reply-box, .scrollable-chat {
         max-width: 98vw;
@@ -907,11 +929,18 @@ def main():
                 reply = st.session_state.replies[i]
                 with st.container():
                     st.markdown("<div class='reply-box'>", unsafe_allow_html=True)
-                    st.text_area("返信文", reply, key=f"reply_area_{i}", height=100)
-                    copy_to_clipboard_button(reply, "📋 コピー", "✅ コピーしました！")
-                    if st.button("🔄 再作成", key=f"regen_reply_{i}"):
-                        st.session_state.replies[i] = generate_reply(message, st.session_state.persona)
-                        st.experimental_rerun()
+                    
+                    # 返信文をコピー可能なコードブロックで表示
+                    st.markdown("**返信文（クリックしてコピー）:**")
+                    st.code(reply, language=None)
+                    
+                    # 再作成ボタン
+                    if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
+                        # 新しい返信を生成
+                        new_reply = generate_reply(message, st.session_state.persona)
+                        st.session_state.replies[i] = new_reply
+                        st.rerun()
+                    
                     st.markdown("</div>", unsafe_allow_html=True)
             if i < len(st.session_state.messages) - 1:
                 st.markdown("<hr style='margin:0.5em 0;' />", unsafe_allow_html=True)
