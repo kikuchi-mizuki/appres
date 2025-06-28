@@ -901,12 +901,78 @@ def main():
         with st.container():
             st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
             st.header("👤 ペルソナ設定")
-            st.text_input("名前", value=st.session_state.persona["name"], key="persona_name")
-            st.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age")
-            st.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation")
-            st.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests")
-            st.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality")
-            st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style")
+            
+            # プリセットペルソナの選択
+            st.markdown("**プリセット:**")
+            preset_col1, preset_col2 = st.columns(2)
+            with preset_col1:
+                if st.button("🎀 可愛い系", key="preset_cute", use_container_width=True):
+                    st.session_state.persona = {
+                        "name": "ゆい",
+                        "age": 24,
+                        "occupation": "OL",
+                        "interests": ["カフェ巡り", "インスタ映え", "コスメ"],
+                        "personality": "明るくて甘い性格",
+                        "writing_style": "可愛らしく、絵文字を多用"
+                    }
+                    st.success("✅ 可愛い系ペルソナを設定しました！")
+                    st.rerun()
+            with preset_col2:
+                if st.button("💼 大人系", key="preset_mature", use_container_width=True):
+                    st.session_state.persona = {
+                        "name": "美咲",
+                        "age": 30,
+                        "occupation": "キャリアウーマン",
+                        "interests": ["ワイン", "旅行", "読書"],
+                        "personality": "落ち着いていて知的",
+                        "writing_style": "大人っぽく、洗練された文章"
+                    }
+                    st.success("✅ 大人系ペルソナを設定しました！")
+                    st.rerun()
+            
+            st.markdown("---")
+            
+            # ペルソナ設定の入力フィールド
+            new_name = st.text_input("名前", value=st.session_state.persona["name"], key="persona_name_input")
+            new_age = st.number_input("年齢", min_value=18, max_value=100, value=st.session_state.persona["age"], key="persona_age_input")
+            new_occupation = st.text_input("職業", value=st.session_state.persona["occupation"], key="persona_occupation_input")
+            new_interests_text = st.text_input("趣味（カンマ区切り）", value=", ".join(st.session_state.persona["interests"]), key="persona_interests_input")
+            new_personality = st.text_input("性格", value=st.session_state.persona["personality"], key="persona_personality_input")
+            new_writing_style = st.text_input("文章スタイル", value=st.session_state.persona["writing_style"], key="persona_writing_style_input")
+            
+            # 保存ボタン
+            if st.button("💾 ペルソナを保存", key="save_persona", use_container_width=True):
+                # セッションステートに保存
+                st.session_state.persona = {
+                    "name": new_name,
+                    "age": new_age,
+                    "occupation": new_occupation,
+                    "interests": [interest.strip() for interest in new_interests_text.split(",") if interest.strip()],
+                    "personality": new_personality,
+                    "writing_style": new_writing_style
+                }
+                st.success("✅ ペルソナを保存しました！")
+                
+                # 既存の返信がある場合は自動的に再生成
+                if 'messages' in st.session_state and st.session_state.messages and 'replies' in st.session_state:
+                    with st.spinner("新しいペルソナで返信を再生成中..."):
+                        st.session_state.replies = []
+                        for msg in st.session_state.messages:
+                            reply = generate_reply(msg, st.session_state.persona)
+                            st.session_state.replies.append(reply)
+                    st.success("✅ 返信を新しいペルソナで再生成しました！")
+                    st.rerun()
+            
+            # 現在のペルソナ情報を表示
+            st.markdown("---")
+            st.markdown("**現在のペルソナ:**")
+            st.markdown(f"**名前**: {st.session_state.persona['name']}")
+            st.markdown(f"**年齢**: {st.session_state.persona['age']}歳")
+            st.markdown(f"**職業**: {st.session_state.persona['occupation']}")
+            st.markdown(f"**趣味**: {', '.join(st.session_state.persona['interests'])}")
+            st.markdown(f"**性格**: {st.session_state.persona['personality']}")
+            st.markdown(f"**文章スタイル**: {st.session_state.persona['writing_style']}")
+            
             st.markdown('</div>', unsafe_allow_html=True)
 
     # メインコンテンツ
