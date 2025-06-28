@@ -779,7 +779,7 @@ def send_reply(email, reply_url, reply_text):
         return False, f"返信送信エラー: {str(e)}"
 
 def send_reply_from_history_page(email, reply_url, reply_text):
-    """詳細ページ（履歴ページ）から返信を送信"""
+    """詳細ページ（履歴ページ）から返信を送信（form.submit()を明示的に発火＆POSTリクエスト内容を保存）"""
     try:
         log_debug(f"詳細ページから返信を送信: {reply_url}")
         
@@ -790,18 +790,24 @@ def send_reply_from_history_page(email, reply_url, reply_text):
                 return False, "cookieファイルの読み込みに失敗しました"
             
             page = context.new_page()
+            post_requests = []
+            def on_request(request):
+                if request.method == "POST":
+                    post_requests.append({
+                        "url": request.url,
+                        "headers": dict(request.headers),
+                        "post_data": request.post_data
+                    })
+            page.on("request", on_request)
             
             # 詳細ページに遷移
             if reply_url.startswith("/"):
                 full_url = f"https://www.yyc.co.jp{reply_url}"
             else:
                 full_url = reply_url
-                
             page.goto(full_url, wait_until="domcontentloaded", timeout=30000)
             time.sleep(3)
-            
             log_debug(f"詳細ページのURL: {page.url}")
-            
             # デバッグ用にHTMLを保存
             try:
                 screenshot_dir = os.path.join(os.getcwd(), "screenshots")
@@ -813,8 +819,7 @@ def send_reply_from_history_page(email, reply_url, reply_text):
                 log_debug(f"詳細ページのHTMLを保存: {history_html_path}")
             except Exception as e:
                 log_debug(f"詳細ページHTML保存に失敗: {str(e)}")
-            
-            # 返信フォームを探す（複数のセレクターを試行）
+            # 返信フォームを探す
             textarea = None
             textarea_selectors = [
                 "textarea[name='message']",
@@ -825,95 +830,72 @@ def send_reply_from_history_page(email, reply_url, reply_text):
                 ".reply-form textarea",
                 ".msgForm textarea"
             ]
-            
             for selector in textarea_selectors:
                 textarea = page.query_selector(selector)
                 if textarea:
                     log_debug(f"返信フォームが見つかりました: {selector}")
                     break
-            
             if not textarea:
                 log_debug("返信フォームが見つかりません")
                 return False, "詳細ページで返信フォームが見つかりませんでした"
-            
-            # 送信ボタンを探す（複数のセレクターを試行）
-            send_btn = None
-            button_selectors = [
-                "input[type='submit']",
-                "button[type='submit']",
-                "button:has-text('送信')",
-                "input[value='送信']",
-                ".submit-button",
-                "#submit-button",
-                ".reply-button",
-                "button:has-text('返信')",
-                ".msgForm input[type='submit']",
-                ".msgForm button[type='submit']",
-                "form input[type='submit']",
-                "form button[type='submit']"
-            ]
-            
-            for selector in button_selectors:
-                send_btn = page.query_selector(selector)
-                if send_btn:
-                    log_debug(f"送信ボタンが見つかりました: {selector}")
-                    break
-            
-            if not send_btn:
-                log_debug("送信ボタンが見つかりません")
-                # フォーム内の全てのボタンを確認
-                all_buttons = page.query_selector_all("button, input[type='submit']")
-                log_debug(f"ページ内のボタン数: {len(all_buttons)}")
-                for i, btn in enumerate(all_buttons):
-                    try:
-                        btn_text = btn.inner_text() or btn.get_attribute('value') or ''
-                        log_debug(f"ボタン {i}: {btn_text}")
-                    except:
-                        log_debug(f"ボタン {i}: テキスト取得失敗")
-                return False, "詳細ページで送信ボタンが見つかりませんでした"
-            
-            # フォームが有効になるまで待機
-            try:
-                page.wait_for_selector("textarea:not([disabled]):not([readonly])", timeout=5000)
-            except Exception as e:
-                log_debug(f"フォームの有効化待機中にタイムアウト: {str(e)}")
-            
             # テキストを入力
             textarea.fill(reply_text)
             log_debug("返信テキストを入力しました")
-            
-            # 送信ボタンが有効になるまで待機
-            try:
-                page.wait_for_selector("input[type='submit']:not([disabled]), button[type='submit']:not([disabled])", timeout=5000)
-            except Exception as e:
-                log_debug(f"送信ボタンの有効化待機中にタイムアウト: {str(e)}")
-            
-            # 送信ボタンの状態を確認
-            is_visible = send_btn.is_visible()
-            is_enabled = send_btn.is_enabled()
-            log_debug(f"送信ボタン: visible={is_visible}, enabled={is_enabled}")
-            
-            # 送信ボタンをクリック
-            try:
-                send_btn.scroll_into_view_if_needed()
-                send_btn.click(timeout=15000)  # タイムアウトを15秒に延長
-                log_debug("送信ボタンをクリックしました")
-            except Exception as e:
-                log_debug(f"送信ボタンのクリックに失敗: {str(e)}")
-                # JavaScriptでクリックイベントを発火
+            # form要素を取得しsubmitイベントを発火
+            form_handle = textarea.evaluate_handle('el => el.form')
+            if form_handle:
+                log_debug("form要素を取得、submitイベントを発火")
+                form_handle.evaluate('form => form.submit()')
+                time.sleep(3)
+            else:
+                log_debug("form要素が取得できなかったため、従来通り送信ボタンをクリック")
+                # 送信ボタンを探す
+                send_btn = None
+                button_selectors = [
+                    "input[type='submit']",
+                    "button[type='submit']",
+                    "button:has-text('送信')",
+                    "input[value='送信']",
+                    ".submit-button",
+                    "#submit-button",
+                    ".reply-button",
+                    "button:has-text('返信')",
+                    ".msgForm input[type='submit']",
+                    ".msgForm button[type='submit']",
+                    "form input[type='submit']",
+                    "form button[type='submit']"
+                ]
+                for selector in button_selectors:
+                    send_btn = page.query_selector(selector)
+                    if send_btn:
+                        log_debug(f"送信ボタンが見つかりました: {selector}")
+                        break
+                if not send_btn:
+                    log_debug("送信ボタンが見つかりません")
+                    return False, "詳細ページで送信ボタンが見つかりませんでした"
                 try:
-                    page.evaluate("(btn) => btn.click()", send_btn)
-                    log_debug("JavaScriptでクリックイベントを発火しました")
-                except Exception as js_error:
-                    log_debug(f"JavaScriptクリックに失敗: {str(js_error)}")
-                    return False, "送信ボタンがクリックできませんでした"
-            
-            # 送信成功の確認
-            time.sleep(3)
+                    send_btn.scroll_into_view_if_needed()
+                    send_btn.click(timeout=15000)
+                    log_debug("送信ボタンをクリックしました")
+                except Exception as e:
+                    log_debug(f"送信ボタンのクリックに失敗: {str(e)}")
+                    try:
+                        page.evaluate("(btn) => btn.click()", send_btn)
+                        log_debug("JavaScriptでクリックイベントを発火しました")
+                    except Exception as js_error:
+                        log_debug(f"JavaScriptクリックに失敗: {str(js_error)}")
+                        return False, "送信ボタンがクリックできませんでした"
+                time.sleep(3)
+            # 送信後のPOSTリクエスト内容を保存
+            if post_requests:
+                post_debug_path = os.path.join(screenshot_dir, "history_reply_post_debug.json")
+                import json as _json
+                with open(post_debug_path, "w", encoding="utf-8") as f:
+                    _json.dump(post_requests, f, ensure_ascii=False, indent=2)
+                log_debug(f"送信時のPOSTリクエスト内容を保存: {post_debug_path}")
+            # 送信後の確認
             current_url = page.url
             log_debug(f"送信後のURL: {current_url}")
-            
-            # 成功メッセージの確認
             success_selectors = [
                 ".success-message",
                 ".alert-success",
@@ -921,7 +903,6 @@ def send_reply_from_history_page(email, reply_url, reply_text):
                 "div:has-text('送信完了')",
                 "div:has-text('返信しました')"
             ]
-            
             for selector in success_selectors:
                 try:
                     element = page.query_selector(selector)
@@ -932,18 +913,14 @@ def send_reply_from_history_page(email, reply_url, reply_text):
                         return True, "詳細ページから返信を送信しました"
                 except Exception:
                     continue
-            
-            # URLの変更で成功を確認
             if "history" in current_url and "id=" in current_url:
                 log_debug("送信成功を確認: URLが履歴ページに遷移")
                 context.close()
                 browser.close()
                 return True, "詳細ページから返信を送信しました"
-            
             context.close()
             browser.close()
             return False, "送信の成功確認ができませんでした"
-            
     except Exception as e:
         log_error(f"詳細ページからの返信送信エラー: {str(e)}", e)
         return False, f"詳細ページからの返信送信エラー: {str(e)}"
