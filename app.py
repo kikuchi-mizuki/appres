@@ -778,6 +778,64 @@ def send_reply(email, reply_url, reply_text):
     except Exception as e:
         return False, f"返信送信エラー: {str(e)}"
 
+def send_reply_from_history_page(email, reply_url, reply_text):
+    """詳細ページ（履歴ページ）から返信を送信"""
+    try:
+        log_debug(f"詳細ページから返信を送信: {reply_url}")
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = load_cookies(browser, email)
+            if context is None:
+                return False, "cookieファイルの読み込みに失敗しました"
+            
+            page = context.new_page()
+            
+            # 詳細ページに遷移
+            if reply_url.startswith("/"):
+                full_url = f"https://www.yyc.co.jp{reply_url}"
+            else:
+                full_url = reply_url
+                
+            page.goto(full_url, wait_until="domcontentloaded", timeout=30000)
+            time.sleep(2)
+            
+            # 返信フォームを探す
+            textarea = page.query_selector("textarea[name='message']")
+            if not textarea:
+                textarea = page.query_selector("textarea")
+            
+            if not textarea:
+                return False, "詳細ページで返信フォームが見つかりませんでした"
+            
+            # 送信ボタンを探す
+            send_btn = page.query_selector("input[type='submit'], button[type='submit']")
+            if not send_btn:
+                send_btn = page.query_selector("button:has-text('送信')")
+            
+            if not send_btn:
+                return False, "詳細ページで送信ボタンが見つかりませんでした"
+            
+            # テキストを入力
+            textarea.fill(reply_text)
+            log_debug("返信テキストを入力しました")
+            
+            # 送信ボタンをクリック
+            send_btn.click(timeout=10000)
+            log_debug("送信ボタンをクリックしました")
+            
+            # 送信成功の確認
+            time.sleep(3)
+            current_url = page.url
+            
+            context.close()
+            browser.close()
+            return True, "詳細ページから返信を送信しました"
+            
+    except Exception as e:
+        log_error(f"詳細ページからの返信送信エラー: {str(e)}", e)
+        return False, f"詳細ページからの返信送信エラー: {str(e)}"
+
 def main():
     if 'user_email' not in st.session_state:
         st.session_state.user_email = ""
@@ -1023,12 +1081,36 @@ def main():
                     st.markdown("**返信文（クリックしてコピー）:**")
                     st.code(reply, language=None)
                     
-                    # 再作成ボタン
-                    if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
-                        # 新しい返信を生成
-                        new_reply = generate_reply(message, st.session_state.persona)
-                        st.session_state.replies[i] = new_reply
-                        st.rerun()
+                    # ボタンを横並びで配置
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        # 再作成ボタン
+                        if st.button("🔄 再作成", key=f"regen_reply_{i}", use_container_width=True):
+                            # 新しい返信を生成
+                            new_reply = generate_reply(message, st.session_state.persona)
+                            st.session_state.replies[i] = new_reply
+                            st.rerun()
+                    
+                    with col2:
+                        # 詳細ページから送信ボタン
+                        if st.button("📤 詳細ページから送信", key=f"send_from_history_{i}", use_container_width=True):
+                            if not st.session_state.user_email:
+                                st.error("メールアドレスを入力してください")
+                            elif not message.get('reply_url'):
+                                st.error("返信URLがありません")
+                            else:
+                                with st.spinner("詳細ページから返信を送信中..."):
+                                    success, message_text = send_reply_from_history_page(
+                                        st.session_state.user_email, 
+                                        message['reply_url'], 
+                                        reply
+                                    )
+                                    if success:
+                                        st.success(f"✅ {message_text}")
+                                        # 送信成功後、メッセージ一覧を更新
+                                        st.rerun()
+                                    else:
+                                        st.error(f"❌ {message_text}")
                     
                     st.markdown("</div>", unsafe_allow_html=True)
             if i < len(st.session_state.messages) - 1:
