@@ -161,7 +161,16 @@ def get_full_message_from_history(page, reply_url):
         
         # 詳細ページでメッセージ本文を取得（複数のセレクターを試行）
         message_selectors = [
-            # テキストメッセージ用セレクター
+            # 相手からのメッセージ（receiveCont）を明示的に指定
+            ".msgCont.receiveCont .wrapinner p",
+            ".msgCont.receiveCont .wrapinner div:not(.stamp)",
+            ".msgCont.receiveCont .body .wrap .wrapinner",
+            ".msgCont.receiveCont .body .wrap",
+            ".msgCont.receiveCont .body",
+            # スタンプ画像用セレクター（相手からのメッセージ）
+            ".msgCont.receiveCont .stamp img",
+            ".msgCont.receiveCont .stamp.attach img",
+            # フォールバック用（相手からのメッセージを優先）
             ".msgCont .wrapinner p",
             ".msgCont .wrapinner div:not(.stamp)",
             ".msgCont .body .wrap .wrapinner",
@@ -208,7 +217,12 @@ def get_full_message_from_history(page, reply_url):
         if not full_message:
             log_debug("個別セレクターでメッセージが見つからないため、msgCont要素全体から抽出を試行")
             try:
-                msg_containers = page.query_selector_all(".msgCont")
+                # まず相手からのメッセージ（receiveCont）を探す
+                msg_containers = page.query_selector_all(".msgCont.receiveCont")
+                if not msg_containers:
+                    # receiveContがない場合は全てのmsgContを取得
+                    msg_containers = page.query_selector_all(".msgCont")
+                
                 if msg_containers:
                     log_debug(f"msgCont要素を {len(msg_containers)} 個発見")
                     # 最初のmsgCont（相手からのメッセージ）を取得
