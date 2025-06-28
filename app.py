@@ -1018,7 +1018,7 @@ def main():
     }
 
     .stTextArea textarea, .stCode {
-      color: #111 !important;
+      color: #000 !important;
       background: #fff !important;
       font-weight: 500 !important;
     }
