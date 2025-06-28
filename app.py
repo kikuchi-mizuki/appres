@@ -350,9 +350,29 @@ def get_latest_messages(page):
         log_error("メッセージ取得エラー", e)
         return []
 
+def normalize_name(name):
+    """相手の名前を正規化（敬称や余分な文字を除去）"""
+    if not name:
+        return "相手"
+    
+    # 敬称を除去
+    name = name.replace("さん", "").replace("くん", "").replace("ちゃん", "").replace("様", "")
+    
+    # 余分な空白を除去
+    name = name.strip()
+    
+    # 空文字列の場合はデフォルト値を返す
+    if not name:
+        return "相手"
+    
+    return name
+
 def generate_reply(message, persona):
     """ChatGPTで返信文を生成"""
     try:
+        # 相手の名前を取得して正規化
+        sender_name = normalize_name(message.get('sender', '相手'))
+        
         # プロンプトの作成
         prompt = f"""
         以下のメッセージに対する返信を、以下のペルソナに基づいて生成してください。
@@ -365,6 +385,8 @@ def generate_reply(message, persona):
         - 性格: {persona['personality']}
         - 文章スタイル: {persona['writing_style']}
         
+        相手の名前: {sender_name}
+        
         メッセージ:
         {message['content']}
         
@@ -374,6 +396,7 @@ def generate_reply(message, persona):
         3. 会話を発展させる要素を含める
         4. 短すぎず長すぎない適度な長さ
         5. 絵文字を適度に使用
+        6. 相手の名前（{sender_name}）を自然に使用する（例：「{sender_name}さん」）
         
         返信文のみを出力してください。
         """
@@ -382,7 +405,7 @@ def generate_reply(message, persona):
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。"},
+                {"role": "system", "content": "あなたは親しみやすい女性のペルソナで、マッチングアプリでの会話を担当します。相手の名前を自然に使用して親しみやすい返信を生成してください。"},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
