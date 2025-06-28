@@ -161,6 +161,16 @@ def get_full_message_from_history(page, reply_url):
         
         # 詳細ページでメッセージ本文を取得（複数のセレクターを試行）
         message_selectors = [
+            # テキストメッセージ用セレクター
+            ".msgCont .wrapinner p",
+            ".msgCont .wrapinner div:not(.stamp)",
+            ".msgCont .body .wrap .wrapinner",
+            ".msgCont .body .wrap",
+            ".msgCont .body",
+            # スタンプ画像用セレクター
+            ".msgCont .stamp img",
+            ".msgCont .stamp.attach img",
+            # その他のセレクター
             ".message_listWrap .message p",
             ".mdl_listBox_simple .message p", 
             "div.message p",
@@ -179,12 +189,48 @@ def get_full_message_from_history(page, reply_url):
                     log_debug(f"詳細ページでセレクター '{selector}' で {len(elements)} 個の要素を発見")
                     # 最初のメッセージ要素（相手からのメッセージ）を取得
                     if len(elements) > 0:
-                        full_message = elements[0].inner_text().strip()
-                        log_debug(f"詳細ページから取得した全文: {full_message[:100]}...")
-                        break
+                        element = elements[0]
+                        # 画像の場合はalt属性を取得
+                        if element.tag_name.lower() == 'img':
+                            full_message = element.get_attribute('alt') or element.get_attribute('title') or "[スタンプ画像]"
+                        else:
+                            full_message = element.inner_text().strip()
+                        
+                        if full_message:
+                            log_debug(f"詳細ページから取得した全文: {full_message[:100]}...")
+                            break
             except Exception as e:
                 log_debug(f"セレクター '{selector}' での取得に失敗: {str(e)}")
                 continue
+        
+        # メッセージが見つからない場合、msgCont要素全体からテキストを抽出
+        if not full_message:
+            log_debug("個別セレクターでメッセージが見つからないため、msgCont要素全体から抽出を試行")
+            try:
+                msg_containers = page.query_selector_all(".msgCont")
+                if msg_containers:
+                    log_debug(f"msgCont要素を {len(msg_containers)} 個発見")
+                    # 最初のmsgCont（相手からのメッセージ）を取得
+                    first_msg = msg_containers[0]
+                    # スタンプ画像の確認
+                    stamp_img = first_msg.query_selector(".stamp img")
+                    if stamp_img:
+                        full_message = stamp_img.get_attribute('alt') or stamp_img.get_attribute('title') or "[スタンプ画像]"
+                        log_debug(f"スタンプ画像を発見: {full_message}")
+                    else:
+                        # テキストメッセージの確認
+                        text_content = first_msg.inner_text().strip()
+                        if text_content:
+                            # 名前や時刻以外の部分を抽出
+                            lines = text_content.split('\n')
+                            for line in lines:
+                                line = line.strip()
+                                if line and not line.startswith('くまひろ') and not line.startswith('08:') and not line.startswith('09:') and not line.startswith('10:') and not line.startswith('11:') and not line.startswith('12:') and not line.startswith('13:') and not line.startswith('14:') and not line.startswith('15:') and not line.startswith('16:') and not line.startswith('17:') and not line.startswith('18:') and not line.startswith('19:') and not line.startswith('20:') and not line.startswith('21:') and not line.startswith('22:') and not line.startswith('23:') and not line.startswith('00:') and not line.startswith('01:') and not line.startswith('02:') and not line.startswith('03:') and not line.startswith('04:') and not line.startswith('05:') and not line.startswith('06:') and not line.startswith('07:'):
+                                    full_message = line
+                                    break
+                            log_debug(f"msgCont全体から抽出したテキスト: {full_message}")
+            except Exception as e:
+                log_debug(f"msgCont要素からの抽出に失敗: {str(e)}")
         
         if not full_message:
             log_debug("詳細ページからメッセージ本文を取得できませんでした")
