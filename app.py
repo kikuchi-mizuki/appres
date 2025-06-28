@@ -1170,7 +1170,7 @@ def main():
         st.markdown('<div class="scrollable-chat">', unsafe_allow_html=True)
         for i, message in enumerate(st.session_state.messages):
             st.markdown(f"<div class='user-card'><b>{message['sender']}</b> <span style='color:#888;font-size:0.9em;'>({message['time']})</span></div>", unsafe_allow_html=True)
-            st.text_area("メッセージ本文", message['content'], key=f"msg_{i}", height=200, disabled=True)
+            st.markdown(f'<div style="color:#000;font-size:1.1em;line-height:1.7;font-family:inherit;white-space:pre-wrap;background:#fff;padding:1em 1.2em;border-radius:12px;border:1.5px solid #eee;margin-bottom:0.5em;">{message["content"]}</div>', unsafe_allow_html=True)
             if 'replies' in st.session_state and i < len(st.session_state.replies):
                 reply = st.session_state.replies[i]
                 with st.container():
