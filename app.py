@@ -304,8 +304,9 @@ def get_latest_messages(page):
                 message_text = content.inner_text() if content else ""
                 log_debug(f"メッセージ本文: {message_text[:50]}...")
                 # デバッグ出力を追加
-                print(f"DEBUG: message_text = {message_text}")
-                st.write(f"DEBUG: message_text = {message_text}")
+                if st.session_state.get("show_debug", False):
+                    print(f"DEBUG: message_text = {message_text}")
+                    st.text(f"DEBUG: message_text = {message_text}")
                 time_elem = element.query_selector(".date, .thumb + div .date")
                 sent_time = time_elem.inner_text() if time_elem else ""
                 log_debug(f"送信日時: {sent_time}")
@@ -1017,7 +1018,12 @@ def main():
     }
 
     .stTextArea textarea, .stCode {
-      color: #222 !important;
+      color: #111 !important;
+      background: #fff !important;
+      font-weight: 500 !important;
+    }
+    .stTextArea textarea::placeholder {
+      color: #bbb !important;
     }
     </style>
     ''', unsafe_allow_html=True)
