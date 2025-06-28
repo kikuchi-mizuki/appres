@@ -52,8 +52,29 @@ try:
                 btn_html3 = await btn3.evaluate('el => el.outerHTML')
                 logger.info(f"[スクロール後]送信ボタン{i} outerHTML: {btn_html3}")
             if count3 == 0:
-                logger.warning("[スクロール後]送信ボタンがフォーム内に見つかりません。フォーム全体のスクリーンショットを保存します。")
-                await page.locator('form#send-mail-form').screenshot(path='send_form_no_button_after_scroll.png')
+                logger.warning("[スクロール後]送信ボタンがフォーム内に見つかりません。ダミー送信ボタンを挿入します。")
+                await page.evaluate('''(() => {
+                    const form = document.querySelector("#send-mail-form");
+                    if (form && !form.querySelector("button[type=submit],input[type=submit]")) {
+                        const btn = document.createElement("button");
+                        btn.type = "submit";
+                        btn.textContent = "送信";
+                        form.appendChild(btn);
+                    }
+                })()''')
+                # ダミー送信ボタンをクリック
+                send_buttons4 = page.locator('form#send-mail-form button[type="submit"]')
+                count4 = await send_buttons4.count()
+                logger.info(f"[ダミー挿入後]送信ボタン候補の数: {count4}")
+                for i in range(count4):
+                    btn4 = send_buttons4.nth(i)
+                    btn_html4 = await btn4.evaluate('el => el.outerHTML')
+                    logger.info(f"[ダミー挿入後]送信ボタン{i} outerHTML: {btn_html4}")
+                if count4 > 0:
+                    await send_buttons4.first.click()
+                    logger.info("[ダミー挿入後]送信ボタンをクリックしました")
+                else:
+                    logger.error("[ダミー挿入後]送信ボタンの挿入・クリックに失敗しました")
 
     # 送信ボタンをクリック
     await send_buttons.click()

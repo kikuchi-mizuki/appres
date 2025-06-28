@@ -142,6 +142,70 @@ def check_session_valid(page):
         log_error("セッションチェックエラー", e)
         return False
 
+def get_full_message_from_history(page, reply_url):
+    """詳細ページ（履歴ページ）からメッセージの全文を取得"""
+    try:
+        log_debug(f"詳細ページに遷移して全文を取得: {reply_url}")
+        
+        # 相対パスの場合はフルURLに変換
+        if reply_url.startswith("/"):
+            full_url = f"https://www.yyc.co.jp{reply_url}"
+        else:
+            full_url = reply_url
+            
+        # 詳細ページに遷移
+        page.goto(full_url, wait_until="domcontentloaded", timeout=30000)
+        time.sleep(2)
+        
+        log_debug(f"詳細ページのURL: {page.url}")
+        
+        # 詳細ページでメッセージ本文を取得（複数のセレクターを試行）
+        message_selectors = [
+            ".message_listWrap .message p",
+            ".mdl_listBox_simple .message p", 
+            "div.message p",
+            ".message-content p",
+            ".message-text",
+            ".message-body",
+            ".chat-message p",
+            ".conversation-message p"
+        ]
+        
+        full_message = ""
+        for selector in message_selectors:
+            try:
+                elements = page.query_selector_all(selector)
+                if elements:
+                    log_debug(f"詳細ページでセレクター '{selector}' で {len(elements)} 個の要素を発見")
+                    # 最初のメッセージ要素（相手からのメッセージ）を取得
+                    if len(elements) > 0:
+                        full_message = elements[0].inner_text().strip()
+                        log_debug(f"詳細ページから取得した全文: {full_message[:100]}...")
+                        break
+            except Exception as e:
+                log_debug(f"セレクター '{selector}' での取得に失敗: {str(e)}")
+                continue
+        
+        if not full_message:
+            log_debug("詳細ページからメッセージ本文を取得できませんでした")
+            # デバッグ用にHTMLを保存
+            try:
+                screenshot_dir = os.path.join(os.getcwd(), "screenshots")
+                os.makedirs(screenshot_dir, exist_ok=True)
+                history_html_path = os.path.join(screenshot_dir, "history_detail_debug.html")
+                with open(history_html_path, "w", encoding="utf-8") as f:
+                    content = page.content()
+                    f.write(content)
+                log_debug(f"詳細ページのHTMLを保存: {history_html_path}")
+            except Exception as e:
+                log_debug(f"詳細ページHTML保存に失敗: {str(e)}")
+        
+        return full_message
+        
+    except Exception as e:
+        log_error(f"詳細ページからの全文取得エラー: {str(e)}", e)
+        return ""
+
 def get_latest_messages(page):
     """最新のメッセージを取得（返信URLも含める）"""
     try:
@@ -191,6 +255,20 @@ def get_latest_messages(page):
                 reply_a = element.query_selector("a[href^='/my/mail_box/history/?id=']")
                 reply_url = reply_a.get_attribute("href") if reply_a else None
                 log_debug(f"返信URL: {reply_url}")
+                
+                # 本文が短い場合（50文字未満）または「...」で終わる場合は詳細ページから再取得
+                if message_text and (len(message_text) < 50 or message_text.endswith("...") or "..." in message_text):
+                    log_debug(f"メッセージ {i} の本文が短いため詳細ページから再取得します")
+                    if reply_url:
+                        full_message = get_full_message_from_history(page, reply_url)
+                        if full_message:
+                            message_text = full_message
+                            log_debug(f"詳細ページから取得した全文: {message_text[:100]}...")
+                        else:
+                            log_debug(f"詳細ページからの取得に失敗したため、一覧の内容を使用: {message_text}")
+                    else:
+                        log_debug(f"返信URLがないため詳細ページから取得できません: {message_text}")
+                
                 if message_text:
                     messages.append({
                         "sender": sender_name,
