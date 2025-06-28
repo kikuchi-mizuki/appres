@@ -178,6 +178,9 @@ def get_latest_messages(page):
                 content = element.query_selector(".message p, .thumb + div p")
                 message_text = content.inner_text() if content else ""
                 log_debug(f"メッセージ本文: {message_text[:50]}...")
+                # デバッグ出力を追加
+                print(f"DEBUG: message_text = {message_text}")
+                st.write(f"DEBUG: message_text = {message_text}")
                 time_elem = element.query_selector(".date, .thumb + div .date")
                 sent_time = time_elem.inner_text() if time_elem else ""
                 log_debug(f"送信日時: {sent_time}")
