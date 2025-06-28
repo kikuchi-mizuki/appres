@@ -191,7 +191,8 @@ def get_full_message_from_history(page, reply_url):
                     if len(elements) > 0:
                         element = elements[0]
                         # 画像の場合はalt属性を取得
-                        if element.tag_name.lower() == 'img':
+                        tag_name = element.evaluate('el => el.tagName.toLowerCase()')
+                        if tag_name == 'img':
                             full_message = element.get_attribute('alt') or element.get_attribute('title') or "[スタンプ画像]"
                         else:
                             full_message = element.inner_text().strip()
