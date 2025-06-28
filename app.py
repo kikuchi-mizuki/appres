@@ -65,7 +65,7 @@ with st.sidebar:
 
 def log_debug(message):
     logger.debug(message)
-    if st.session_state.get("show_debug"):
+    if st.session_state.get("show_debug", False):
         st.text(f"DEBUG: {message}")
 
 def log_error(message, error=None):
@@ -1015,11 +1015,15 @@ def main():
       }
       .reply-actions { flex-direction: column; gap: 0.7em; }
     }
+
+    .stTextArea textarea, .stCode {
+      color: #222 !important;
+    }
     </style>
     ''', unsafe_allow_html=True)
 
     # タイトルを親しみやすく小さめに
-    st.title("📨 YYCで届いたメッセージに楽しく返信しよう♪")
+    st.title("📨 YYCで届いたメッセージに返信しよう♪")
     
     # サイドバーをセクションごとに区切る
     with st.sidebar:
