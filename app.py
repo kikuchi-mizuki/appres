@@ -1205,6 +1205,7 @@ def main():
                                         reply
                                     )
                                     if success:
+                                        st.success("送信完了しました")
                                         st.success(f"✅ {message_text}")
                                         # 送信成功後、メッセージ一覧を更新
                                         st.rerun()
